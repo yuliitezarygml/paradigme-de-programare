@@ -1,4 +1,0 @@
-#Setari Aplicatie Rezident (Lab 5)
-#Mon Sep 21 10:20:29 EEST 2026
-autoRefresh=true
-refreshIntervalSeconds=5
