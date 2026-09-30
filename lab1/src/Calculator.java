@@ -268,11 +268,11 @@ public class Calculator extends JFrame implements ActionListener {
 
         String[] btns = {
             "π", "e", "CE", "C", "⌫",
-            "x²", "1/x", "|x|", "exp", "mod",
+            "x²", "1/x", "10^x", "exp", "mod",
             "√x", "sin", "cos", "tan", "/",
             "x^y", "7", "8", "9", "*",
-            "10^x", "4", "5", "6", "-",
-            "log", "1", "2", "3", "+",
+            "log10", "4", "5", "6", "-",
+            "log2", "1", "2", "3", "+",
             "ln", "n!", "+/-", "0", "="
         };
 
@@ -515,7 +515,11 @@ public class Calculator extends JFrame implements ActionListener {
                     op = new Tangens(isRadians);
                     break;
                 case "log":
+                case "log10":
                     op = new Logarithm();
+                    break;
+                case "log2":
+                    op = new Log2();
                     break;
                 case "ln":
                     op = new NaturalLog();

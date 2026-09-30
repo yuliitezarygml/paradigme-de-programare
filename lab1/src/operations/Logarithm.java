@@ -4,13 +4,13 @@ package operations;
 public class Logarithm extends UnaryOperation {
     @Override
     public String getName() {
-        return "log";
+        return "log10";
     }
 
     @Override
     public double calculate(double a) throws Exception {
         if (a <= 0) {
-            throw new Exception("log cere x > 0!");
+            throw new Exception("log10 cere x > 0!");
         }
         return Math.log10(a);
     }

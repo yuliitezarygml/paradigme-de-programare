@@ -37,10 +37,18 @@ public class TestCalculator {
             double sin30 = sin.calculate(30);
             System.out.println("sin(30°) = " + sin30 + " [OK]");
 
-            // 5. Тест логарифмов
+            // 5. Тест 3 логарифмов (log10, log2, ln)
             Logarithm log = new Logarithm();
             double log100 = log.calculate(100);
             System.out.println("log10(100) = " + log100 + " [OK]");
+
+            Log2 log2 = new Log2();
+            double log2_8 = log2.calculate(8);
+            System.out.println("log2(8) = " + log2_8 + " [OK]");
+
+            NaturalLog ln = new NaturalLog();
+            double lnE = ln.calculate(Math.E);
+            System.out.println("ln(e) = " + lnE + " [OK]");
 
             // 6. Тест памяти
             Memory mem = new Memory();
