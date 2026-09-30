@@ -1,0 +1,48 @@
+# Скомпилированные файлы Java
+*.class
+bin/
+out/
+target/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+
+# Но не исключать lib/javafx-sdk в lab4 если он нужен:
+!lab4/lib/
+
+# Системные файлы macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# IDE & Редакторы
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Временные файлы и логи
+*.tmp
+*.log
