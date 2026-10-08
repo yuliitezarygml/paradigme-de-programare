@@ -122,7 +122,7 @@ public class TestTextEditor {
             // 1. Aplicăm Bold
             SimpleAttributeSet bold = new SimpleAttributeSet();
             StyleConstants.setBold(bold, true);
-            doc.setCharacterAttributes(0, 12, bold, false); // false = suprapunere
+            doc.setCharacterAttributes(0, 12, bold,  false); // false = suprapunere
 
             // 2. Aplicăm Italic peste același text
             SimpleAttributeSet italic = new SimpleAttributeSet();
@@ -191,6 +191,26 @@ public class TestTextEditor {
             assertTrue("Înlocuire toate aparițiile (3 înlocuiri)", inlocuiri == 3);
             assertTrue("Textul final conține noul subșir",
                     doc.getText(0, doc.getLength()).equals("Kotlin este bun. Kotlin este simplu. Kotlin este OOP."));
+
+            StyledDocument styled = new DefaultStyledDocument();
+            styled.insertString(0, "Lorem ЧАСТО ipsum", null);
+            int at = styled.getText(0, styled.getLength()).indexOf("ЧАСТО");
+            SimpleAttributeSet boldRed = new SimpleAttributeSet();
+            StyleConstants.setBold(boldRed, true);
+            StyleConstants.setForeground(boldRed, Color.RED);
+            StyleConstants.setFontSize(boldRed, 18);
+            styled.setCharacterAttributes(at, "ЧАСТО".length(), boldRed, false);
+            AttributeSet from = styled.getCharacterElement(at).getAttributes();
+            SimpleAttributeSet kept = new SimpleAttributeSet();
+            StyleConstants.setBold(kept, StyleConstants.isBold(from));
+            StyleConstants.setForeground(kept, StyleConstants.getForeground(from));
+            StyleConstants.setFontSize(kept, StyleConstants.getFontSize(from));
+            styled.remove(at, "ЧАСТО".length());
+            styled.insertString(at, "ОЧЕНЬ ДЛИННОЕ", kept);
+            AttributeSet after = styled.getCharacterElement(at + 2).getAttributes();
+            assertTrue("Înlocuirea păstrează Bold", StyleConstants.isBold(after));
+            assertTrue("Înlocuirea păstrează culoarea roșie", Color.RED.equals(StyleConstants.getForeground(after)));
+            assertTrue("Înlocuirea păstrează mărimea", StyleConstants.getFontSize(after) == 18);
         } catch (Exception ex) {
             assertTrue("Eroare la testul ReplaceAll: " + ex.getMessage(), false);
         }

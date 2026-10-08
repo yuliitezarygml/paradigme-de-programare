@@ -12,6 +12,9 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 /**
@@ -134,6 +137,64 @@ public class FindReplaceDialog extends JDialog {
         return false;
     }
 
+    /**
+     * Удаляет найденный кусок и вставляет новый текст с тем же оформлением.
+     * Стиль берётся до удаления и сразу записывается на каждый новый символ.
+     */
+    private void replaceKeepingStyle(StyledDocument doc, int index, int oldLength, String replacement) throws Exception {
+        AttributeSet style = strongestStyle(doc, index, oldLength);
+        doc.remove(index, oldLength);
+        if (replacement.isEmpty()) {
+            return;
+        }
+        doc.insertString(index, replacement, style);
+        doc.setCharacterAttributes(index, replacement.length(), style, true);
+    }
+
+    /** Если в слове стили стоят не на первой букве, берём самый «сильный» символ. */
+    private AttributeSet strongestStyle(StyledDocument doc, int index, int length) {
+        AttributeSet best = copyStyle(doc, index);
+        int bestScore = styleScore(best);
+        for (int i = 1; i < length; i++) {
+            AttributeSet next = copyStyle(doc, index + i);
+            int score = styleScore(next);
+            if (score > bestScore) {
+                best = next;
+                bestScore = score;
+            }
+        }
+        return best;
+    }
+
+    private int styleScore(AttributeSet attrs) {
+        int score = 0;
+        if (StyleConstants.isBold(attrs)) score += 4;
+        if (StyleConstants.isItalic(attrs)) score += 2;
+        if (StyleConstants.isUnderline(attrs)) score += 2;
+        if (StyleConstants.getFontSize(attrs) != AppStyles.defaultFontSize) score += 1;
+        java.awt.Color color = StyleConstants.getForeground(attrs);
+        if (color != null && !color.equals(java.awt.Color.BLACK) && !color.equals(AppStyles.editorForeground)) {
+            score += 8;
+        }
+        return score;
+    }
+
+    /**
+     * Жирный, курсив, подчёркивание, шрифт, размер и цвет.
+     * Копируем сами значения: после удаления фрагмента старая ссылка на стиль уже пустая.
+     */
+    private AttributeSet copyStyle(StyledDocument doc, int index) {
+        AttributeSet from = doc.getCharacterElement(index).getAttributes();
+        SimpleAttributeSet copy = new SimpleAttributeSet();
+        StyleConstants.setBold(copy, StyleConstants.isBold(from));
+        StyleConstants.setItalic(copy, StyleConstants.isItalic(from));
+        StyleConstants.setUnderline(copy, StyleConstants.isUnderline(from));
+        StyleConstants.setFontFamily(copy, StyleConstants.getFontFamily(from));
+        StyleConstants.setFontSize(copy, StyleConstants.getFontSize(from));
+        StyleConstants.setForeground(copy, StyleConstants.getForeground(from));
+        return copy;
+    }
+
     /** c) Если выделение совпадает с поиском — заменяем и ищем следующее. */
     public void replaceCurrent() {
         DocumentTab tab = editor.getActiveTab();
@@ -146,9 +207,20 @@ public class FindReplaceDialog extends JDialog {
             ? selected.equals(searchField.getText())
             : selected.equalsIgnoreCase(searchField.getText()));
         if (same) {
-            pane.replaceSelection(replaceField.getText());
-            tab.setModified(true);
+            try {
+                StyledDocument doc = pane.getStyledDocument();
+                int start = pane.getSelectionStart();
+                int length = pane.getSelectionEnd() - start;
+                replaceKeepingStyle(doc, start, length, replaceField.getText());
+                pane.setCaretPosition(start + replaceField.getText().length());
+                tab.setModified(true);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Eroare în timpul înlocuirii: " + ex.getMessage(),
+                    "Eroare", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         }
+       
         findNext(true);
     }
 
@@ -179,8 +251,7 @@ public class FindReplaceDialog extends JDialog {
                 if (index < 0) {
                     break;
                 }
-                doc.remove(index, search.length());
-                doc.insertString(index, replace, null);
+                replaceKeepingStyle(doc, index, search.length(), replace);
                 count++;
                 from = index + replace.length();
             }

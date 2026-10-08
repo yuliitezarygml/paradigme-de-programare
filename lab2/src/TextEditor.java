@@ -2,17 +2,23 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Toolkit;
+import java.awt.font.TextAttribute;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JScrollPane;
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
@@ -26,8 +32,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
+import javax.swing.plaf.basic.BasicButtonUI;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.Element;
@@ -52,13 +60,22 @@ public class TextEditor extends JFrame {
     private FindReplaceDialog findReplaceDialog;
 
     private final JTabbedPane tabbedPane = new JTabbedPane();
+    private final JPanel tabStrip = new JPanel();
+    private final JScrollPane tabScroll = new JScrollPane(tabStrip);
     private final List<DocumentTab> tabs = new ArrayList<>();
     private int documentCounter = 1;
 
     private JComboBox<String> fontCombo;
     private JComboBox<Integer> sizeCombo;
+    private JToggleButton boldBtn;
+    private JToggleButton italicBtn;
+    private JToggleButton underlineBtn;
+    private JButton colorBtn;
+    private Color currentTextColor = AppStyles.editorForeground;
     /** Пока true, смена пункта в списке только показывает стиль, а не применяет его заново. */
     private boolean ignoreStyleEvents;
+    private int lastCaretDot = -1;
+    private int lastCaretMark = -1;
     private final JLabel statusLabel = new JLabel(" Pregătit");
 
     public TextEditor() {
@@ -184,10 +201,22 @@ public class TextEditor extends JFrame {
         });
         bar.add(sizeCombo);
 
-        bar.add(toolButton("B", e -> toggleBold()));
-        bar.add(toolButton("I", e -> toggleItalic()));
-        bar.add(toolButton("U", e -> toggleUnderline()));
-        bar.add(toolButton("Culoare", e -> chooseTextColor()));
+        boldBtn = styleToggle("B", Font.BOLD);
+        boldBtn.addActionListener(e -> toggleBold());
+        bar.add(boldBtn);
+
+        italicBtn = styleToggle("I", Font.ITALIC);
+        italicBtn.addActionListener(e -> toggleItalic());
+        bar.add(italicBtn);
+
+        underlineBtn = styleToggle("U", Font.PLAIN);
+        underlineBtn.setFont(underlinedFont());
+        underlineBtn.addActionListener(e -> toggleUnderline());
+        bar.add(underlineBtn);
+
+        colorBtn = toolButton("Culoare", e -> chooseTextColor());
+        paintColorButton();
+        bar.add(colorBtn);
         bar.addSeparator();
         bar.add(toolButton("Caută", e -> showFindReplaceDialog()));
 
@@ -197,15 +226,98 @@ public class TextEditor extends JFrame {
     private JButton toolButton(String text, java.awt.event.ActionListener action) {
         JButton button = new JButton(text);
         AppStyles.applyToButton(button);
+        // BasicButtonUI рисует фон. На macOS стандартная кнопка его прячет.
+        button.setUI(new BasicButtonUI());
+        button.setOpaque(true);
+        button.setFocusable(false);
+        button.addChangeListener(e -> {
+            if (button.getModel().isPressed()) {
+                button.setBackground(new Color(0x29, 0x80, 0xB9));
+                button.setForeground(Color.WHITE);
+            } else if (button == colorBtn) {
+                paintColorButton();
+            } else {
+                button.setBackground(AppStyles.buttonBackground);
+                button.setForeground(AppStyles.buttonForeground);
+            }
+        });
         button.addActionListener(action);
         return button;
     }
 
+    /** Кнопка стиля остаётся синей, пока этот стиль включён у курсора. */
+    private JToggleButton styleToggle(String text, int fontStyle) {
+        JToggleButton button = new JToggleButton(text);
+        button.setFont(new Font("Serif", fontStyle, 15));
+        button.setUI(new BasicButtonUI());
+        button.setOpaque(true);
+        button.setFocusPainted(false);
+        button.setFocusable(false);
+        button.setPreferredSize(new Dimension(36, 28));
+        button.setMaximumSize(new Dimension(36, 28));
+        markStyleButton(button, false);
+        return button;
+    }
+
+    private Font underlinedFont() {
+        Map<TextAttribute, Object> attrs = new HashMap<>();
+        attrs.put(TextAttribute.FAMILY, "Serif");
+        attrs.put(TextAttribute.SIZE, 15);
+        attrs.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON);
+        return new Font(attrs);
+    }
+
+    private void markStyleButton(JToggleButton button, boolean on) {
+        button.setSelected(on);
+        button.setBackground(on ? new Color(0x29, 0x80, 0xB9) : Color.WHITE);
+        button.setForeground(on ? Color.WHITE : AppStyles.buttonForeground);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(on ? new Color(0x1A, 0x52, 0x7A) : AppStyles.buttonBorderColor, on ? 2 : 1),
+            BorderFactory.createEmptyBorder(2, 8, 2, 8)
+        ));
+    }
+
+    private void paintColorButton() {
+        if (colorBtn == null) {
+            return;
+        }
+        colorBtn.setOpaque(true);
+        colorBtn.setBackground(currentTextColor);
+        int brightness = (currentTextColor.getRed() + currentTextColor.getGreen() + currentTextColor.getBlue()) / 3;
+        colorBtn.setForeground(brightness > 160 ? AppStyles.buttonForeground : Color.WHITE);
+    }
+
     private void initTabs() {
         tabbedPane.setUI(new CustomTabbedPaneUI());
-        tabbedPane.setBackground(AppStyles.tabBackground);
-        tabbedPane.addChangeListener(e -> updateStatusBar());
-        add(tabbedPane, BorderLayout.CENTER);
+        tabbedPane.setBackground(Color.WHITE);
+        tabbedPane.addChangeListener(e -> {
+            lastCaretDot = -1;
+            lastCaretMark = -1;
+            highlightTabs();
+            updateStatusBar();
+            DocumentTab tab = getActiveTab();
+            if (tab != null) {
+                copyCaretStyleToInput(tab.getTextPane());
+                syncStyleControls();
+            }
+        });
+
+        tabStrip.setLayout(new javax.swing.BoxLayout(tabStrip, javax.swing.BoxLayout.X_AXIS));
+        tabStrip.setBackground(AppStyles.tabBackground);
+        tabStrip.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+
+        tabScroll.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xCF, 0xD8, 0xDC)));
+        tabScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        tabScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        tabScroll.getViewport().setBackground(AppStyles.tabBackground);
+        tabScroll.getHorizontalScrollBar().setUnitIncrement(80);
+        int barHeight = tabScroll.getHorizontalScrollBar().getPreferredSize().height;
+        tabScroll.setPreferredSize(new Dimension(100, 40 + barHeight));
+
+        JPanel center = new JPanel(new BorderLayout());
+        center.add(tabScroll, BorderLayout.NORTH);
+        center.add(tabbedPane, BorderLayout.CENTER);
+        add(center, BorderLayout.CENTER);
     }
 
     private void initStatusBar() {
@@ -225,16 +337,28 @@ public class TextEditor extends JFrame {
     public DocumentTab addNewEmptyTab() {
         DocumentTab tab = new DocumentTab("Document " + (documentCounter++), null);
         tabs.add(tab);
-        tabbedPane.addTab("", tab.getScrollPane());
+        tabbedPane.addTab(tab.getTitle(), tab.getScrollPane());
+        tabStrip.add(tabChip(tab));
+        tabStrip.add(Box.createHorizontalStrut(6));
 
         int index = tabs.size() - 1;
-        tabbedPane.setTabComponentAt(index, tabHeader(tab));
         tabbedPane.setSelectedIndex(index);
+        highlightTabs();
+        tabScroll.revalidate();
+        final int opened = index;
+        javax.swing.SwingUtilities.invokeLater(() -> scrollTabIntoView(opened));
 
         // Звёздочка в заголовке появляется, когда текст изменился.
         tab.setOnModifiedStateChanged(() -> refreshTabTitle(tab));
+        tab.getTextPane().addCaretListener(e -> updateStatusBar());
+        // Отдельный слушатель: кнопки обновляются только когда курсор реально сдвинулся.
         tab.getTextPane().addCaretListener(e -> {
-            updateStatusBar();
+            if (e.getDot() == lastCaretDot && e.getMark() == lastCaretMark) {
+                return;
+            }
+            lastCaretDot = e.getDot();
+            lastCaretMark = e.getMark();
+            copyCaretStyleToInput(tab.getTextPane());
             syncStyleControls();
         });
         updateStatusBar();
@@ -242,23 +366,97 @@ public class TextEditor extends JFrame {
         return tab;
     }
 
-    /** Заголовок вкладки: имя файла и кнопка ×. */
-    private JPanel tabHeader(DocumentTab tab) {
-        JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        header.setOpaque(false);
+    /** Одна плашка в полосе: имя файла слева, крестик справа. */
+    private JPanel tabChip(DocumentTab tab) {
+        JPanel chip = new JPanel(new BorderLayout(8, 0));
+        chip.setOpaque(true);
+        chip.setBackground(AppStyles.tabBackground);
+        chip.setBorder(chipBorder(false));
 
         JLabel title = new JLabel(tab.getDisplayTitle());
+        title.setFont(new Font("SansSerif", Font.PLAIN, 13));
         title.setForeground(AppStyles.tabForeground);
 
         JButton close = new JButton("×");
-        close.setBorderPainted(false);
-        close.setContentAreaFilled(false);
+        close.setFont(new Font("SansSerif", Font.BOLD, 16));
+        close.setUI(new BasicButtonUI());
+        close.setMargin(new java.awt.Insets(0, 0, 0, 0));
+        close.setPreferredSize(new Dimension(22, 22));
+        close.setMinimumSize(new Dimension(22, 22));
+        close.setMaximumSize(new Dimension(22, 22));
         close.setFocusable(false);
+        close.setBorder(BorderFactory.createEmptyBorder());
+        close.setContentAreaFilled(false);
+        close.setOpaque(false);
+        close.setForeground(new Color(0x33, 0x41, 0x55));
+        close.setToolTipText("Închide");
         close.addActionListener(e -> closeTab(tab));
 
-        header.add(title);
-        header.add(close);
-        return header;
+        java.awt.event.MouseAdapter open = new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                int index = tabs.indexOf(tab);
+                if (index >= 0) {
+                    tabbedPane.setSelectedIndex(index);
+                    scrollTabIntoView(index);
+                }
+            }
+        };
+        chip.addMouseListener(open);
+        title.addMouseListener(open);
+
+        chip.add(title, BorderLayout.CENTER);
+        chip.add(close, BorderLayout.EAST);
+        fitChip(chip);
+        return chip;
+    }
+
+    private javax.swing.border.Border chipBorder(boolean selected) {
+        return BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(selected ? new Color(0x29, 0x80, 0xB9) : new Color(0xCF, 0xD8, 0xDC)),
+            BorderFactory.createEmptyBorder(4, 10, 4, 6)
+        );
+    }
+
+    /** Ширина плашки считается уже вместе с рамкой, чтобы крестик не обрезался. */
+    private void fitChip(JPanel chip) {
+        chip.setPreferredSize(null);
+        chip.setMaximumSize(null);
+        Dimension size = chip.getPreferredSize();
+        int width = size.width + 4;
+        int height = 34;
+        chip.setPreferredSize(new Dimension(width, height));
+        chip.setMinimumSize(new Dimension(width, height));
+        chip.setMaximumSize(new Dimension(width, height));
+    }
+
+    private void highlightTabs() {
+        int selected = tabbedPane.getSelectedIndex();
+        int chipIndex = 0;
+        for (java.awt.Component component : tabStrip.getComponents()) {
+            if (!(component instanceof JPanel)) {
+                continue;
+            }
+            JPanel chip = (JPanel) component;
+            boolean on = chipIndex == selected;
+            chip.setBackground(on ? Color.WHITE : new Color(0xE2, 0xE8, 0xF0));
+            chip.setBorder(chipBorder(on));
+            chipIndex++;
+        }
+    }
+
+    private void scrollTabIntoView(int index) {
+        int chipIndex = 0;
+        for (java.awt.Component component : tabStrip.getComponents()) {
+            if (!(component instanceof JPanel)) {
+                continue;
+            }
+            if (chipIndex == index) {
+                tabStrip.scrollRectToVisible(component.getBounds());
+                return;
+            }
+            chipIndex++;
+        }
     }
 
     private void refreshTabTitle(DocumentTab tab) {
@@ -266,10 +464,34 @@ public class TextEditor extends JFrame {
         if (index < 0) {
             return;
         }
-        JPanel header = (JPanel) tabbedPane.getTabComponentAt(index);
-        if (header != null && header.getComponent(0) instanceof JLabel) {
-            ((JLabel) header.getComponent(0)).setText(tab.getDisplayTitle());
+        int chipIndex = 0;
+        for (java.awt.Component component : tabStrip.getComponents()) {
+            if (!(component instanceof JPanel)) {
+                continue;
+            }
+            if (chipIndex == index) {
+                JPanel chip = (JPanel) component;
+                if (chip.getComponent(0) instanceof JLabel) {
+                    ((JLabel) chip.getComponent(0)).setText(tab.getDisplayTitle());
+                }
+                fitChip(chip);
+                tabStrip.revalidate();
+                return;
+            }
+            chipIndex++;
         }
+    }
+
+    private void removeChip(int index) {
+        int componentIndex = index * 2;
+        if (componentIndex < tabStrip.getComponentCount()) {
+            tabStrip.remove(componentIndex);
+        }
+        if (componentIndex < tabStrip.getComponentCount()) {
+            tabStrip.remove(componentIndex);
+        }
+        tabStrip.revalidate();
+        tabStrip.repaint();
     }
 
     /** Закрыть вкладку. Если есть несохранённый текст — спросить. */
@@ -293,6 +515,8 @@ public class TextEditor extends JFrame {
         if (index >= 0) {
             tabbedPane.remove(index);
             tabs.remove(index);
+            removeChip(index);
+            highlightTabs();
         }
         if (tabs.isEmpty()) {
             addNewEmptyTab();
@@ -337,6 +561,9 @@ public class TextEditor extends JFrame {
             tab.setModified(false);
             refreshTabTitle(tab);
             updateStatusBar();
+            lastCaretDot = -1;
+            lastCaretMark = -1;
+            copyCaretStyleToInput(tab.getTextPane());
             syncStyleControls();
         } catch (Exception ex) {
             tab.setSuppressModifiedEvents(false);
@@ -441,6 +668,7 @@ public class TextEditor extends JFrame {
             pane.setCharacterAttributes(attrs, false);
         }
         pane.requestFocusInWindow();
+        syncStyleControls();
     }
 
     /**
@@ -453,14 +681,47 @@ public class TextEditor extends JFrame {
             return;
         }
         JTextPane pane = tab.getTextPane();
-        AttributeSet attrs = pane.getDocument().getLength() == 0
-            ? pane.getInputAttributes()
-            : styleAtCaret(pane);
+        AttributeSet attrs;
+        if (pane.getDocument().getLength() == 0 || pane.getSelectionStart() == pane.getSelectionEnd()) {
+            attrs = pane.getInputAttributes();
+        } else {
+            attrs = pane.getStyledDocument().getCharacterElement(pane.getSelectionStart()).getAttributes();
+        }
 
         ignoreStyleEvents = true;
         selectFont(StyleConstants.getFontFamily(attrs));
         selectSize(StyleConstants.getFontSize(attrs));
+        if (boldBtn != null) {
+            markStyleButton(boldBtn, StyleConstants.isBold(attrs));
+            markStyleButton(italicBtn, StyleConstants.isItalic(attrs));
+            markStyleButton(underlineBtn, StyleConstants.isUnderline(attrs));
+            currentTextColor = StyleConstants.getForeground(attrs);
+            paintColorButton();
+        }
         ignoreStyleEvents = false;
+    }
+
+    /** Берёт стиль символа у курсора и делает его стилем следующего ввода. */
+    private void copyCaretStyleToInput(JTextPane pane) {
+        if (pane.getDocument().getLength() == 0 || pane.getSelectionStart() != pane.getSelectionEnd()) {
+            return;
+        }
+        MutableAttributeSet input = pane.getInputAttributes();
+        AttributeSet saved = copyConcreteStyle(styleAtCaret(pane));
+        input.removeAttributes(input);
+        input.addAttributes(saved);
+    }
+
+    /** Копия значений стиля. Нельзя класть в поле ввода сам элемент документа: очистка сотрёт текст. */
+    private AttributeSet copyConcreteStyle(AttributeSet from) {
+        SimpleAttributeSet copy = new SimpleAttributeSet();
+        StyleConstants.setBold(copy, StyleConstants.isBold(from));
+        StyleConstants.setItalic(copy, StyleConstants.isItalic(from));
+        StyleConstants.setUnderline(copy, StyleConstants.isUnderline(from));
+        StyleConstants.setFontFamily(copy, StyleConstants.getFontFamily(from));
+        StyleConstants.setFontSize(copy, StyleConstants.getFontSize(from));
+        StyleConstants.setForeground(copy, StyleConstants.getForeground(from));
+        return copy;
     }
 
     private AttributeSet styleAtCaret(JTextPane pane) {
@@ -524,13 +785,14 @@ public class TextEditor extends JFrame {
             return;
         }
         JTextPane pane = tab.getTextPane();
-        AttributeSet current = pane.getStyledDocument()
-            .getCharacterElement(pane.getSelectionStart())
-            .getAttributes();
+        AttributeSet current = pane.getSelectionStart() == pane.getSelectionEnd()
+            ? pane.getInputAttributes()
+            : pane.getStyledDocument().getCharacterElement(pane.getSelectionStart()).getAttributes();
 
         SimpleAttributeSet attrs = new SimpleAttributeSet();
         if (kind.equals("bold")) {
             StyleConstants.setBold(attrs, !StyleConstants.isBold(current));
+            StyleConstants.setForeground(attrs, Color.RED);
         } else if (kind.equals("italic")) {
             StyleConstants.setItalic(attrs, !StyleConstants.isItalic(current));
         } else {
