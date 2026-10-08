@@ -4,20 +4,21 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 /**
- * Punctul de intrare pentru aplicația de Server (Server Chat Local).
- * Lansează interfața grafică modernă de administrare a rețelei.
+ * Точка входа для запуска Сервера локального чата (Server Chat Local).
+ * Инициализирует и отображает современную графическую панель администратора.
  */
 public class ServerMain {
     public static void main(String[] args) {
-        // Optimizări pentru randare grafică de înaltă rezoluție și fonturi netede
+        // Настройки для четкого рендеринга шрифтов и сглаживания текста на всех дисплеях (включая Retina)
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
-        System.setProperty("apple.awt.application.name", "Server Chat Local");
+        System.setProperty("apple.awt.application.name", "Сервер локального чата");
 
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Exception ignored) {}
 
+        // Запуск графического интерфейса в потоке диспетчеризации событий Swing (EDT)
         SwingUtilities.invokeLater(() -> {
             ServerGUI serverGui = new ServerGUI();
             serverGui.setVisible(true);

@@ -9,12 +9,12 @@ import java.nio.file.Files;
 import java.util.List;
 
 /**
- * Client de rețea responsabil de conexiunea socket TCP către Server.
- * Recepționează asincron mesajele și oferă metode pentru transmiterea de:
- * - mesaje text simple
- * - răspunsuri la mesaje (reply)
- * - fișiere atașate
- * - navigare și creare camere de chat
+ * Сетевой клиент, отвечающий за TCP socket-соединение с сервером.
+ * Асинхронно принимает сообщения и предоставляет методы для:
+ * - отправки обычных текстовых сообщений
+ * - отправки ответов (Reply / цитирование)
+ * - передачи файлов через сеть
+ * - навигации и создания новых комнат чата
  */
 public class ChatClient {
 
@@ -22,7 +22,7 @@ public class ChatClient {
     private ObjectOutputStream out;
     private ObjectInputStream in;
 
-    private String username = "Anonim";
+    private String username = "Аноним";
     private String currentRoom = "#general";
     private volatile boolean connected = false;
     private ClientListener listener;
@@ -44,7 +44,8 @@ public class ChatClient {
     }
 
     /**
-     * Inițiază conexiunea către server pe un fir de execuție separat.
+     * Инициирует подключение к серверу в отдельном фоновом потоке,
+     * чтобы не блокировать графический поток интерфейса (Swing EDT).
      */
     public void connect(String host, int port, String requestedUsername) {
         new Thread(() -> {
@@ -55,25 +56,25 @@ public class ChatClient {
                 in = new ObjectInputStream(socket.getInputStream());
                 connected = true;
 
-                // Trimitere cerere inițială de conectare
+                // Отправка первичного запроса на подключение с именем пользователя
                 NetworkMessage connMsg = new NetworkMessage(MessageType.CONNECT, requestedUsername, "#general");
                 connMsg.setText(requestedUsername);
                 sendMessageDirect(connMsg);
 
-                // Pornire fir ascultare mesaje sosite
+                // Запуск отдельного потока для постоянного прослушивания входящих пакетов
                 new Thread(this::receiveLoop, "ChatClient-Receiver").start();
 
             } catch (Exception e) {
                 connected = false;
                 if (listener != null) {
-                    listener.onConnectionFailed("Eșec la conectare la " + host + ":" + port + " (" + e.getMessage() + ")");
+                    listener.onConnectionFailed("Не удалось подключиться к " + host + ":" + port + " (" + e.getMessage() + ")");
                 }
             }
         }, "ChatClient-ConnectThread").start();
     }
 
     /**
-     * Bucla de ascultare a mesajelor primite de la server.
+     * Непрерывный цикл чтения входящих сообщений от сервера.
      */
     private void receiveLoop() {
         try {
@@ -85,18 +86,18 @@ public class ChatClient {
                 handleServerMessage(msg);
             }
         } catch (EOFException | SocketException e) {
-            // Conexiunea s-a întrerupt
+            // Соединение разорвано со стороны сервера или сети
         } catch (Exception e) {
             if (connected) {
-                System.err.println("[ChatClient] Eroare la citirea fluxului de date: " + e.getMessage());
+                System.err.println("[ChatClient] Ошибка при чтении потока данных: " + e.getMessage());
             }
         } finally {
-            disconnect("Conexiunea cu serverul a fost pierdută.");
+            disconnect("Соединение с сервером было потеряно.");
         }
     }
 
     /**
-     * Tratează fiecare pachet primit de la server.
+     * Обработка принятого сетевого пакета от сервера.
      */
     private void handleServerMessage(NetworkMessage msg) {
         if (msg == null || listener == null) return;
@@ -146,7 +147,7 @@ public class ChatClient {
                 break;
 
             case KICK:
-                disconnect("Ai fost deconectat de pe server: " + msg.getText());
+                disconnect("Вы были отключены от сервера: " + msg.getText());
                 break;
 
             default:
@@ -155,7 +156,7 @@ public class ChatClient {
     }
 
     /**
-     * Transmiterea unui mesaj text sau a unui răspuns (Reply).
+     * Отправка текстового сообщения или ответа с цитированием (Reply).
      */
     public boolean sendChatMessage(String text, String replyToId, String replyToAuthor, String replyToSnippet) {
         if (!connected) return false;
@@ -169,16 +170,16 @@ public class ChatClient {
     }
 
     /**
-     * Transmiterea unui fișier binar în camera de chat curentă.
+     * Передача бинарного файла в текущую комнату чата.
      */
     public boolean sendFile(File file, String replyToId, String replyToAuthor, String replyToSnippet) {
         if (!connected || file == null || !file.exists()) return false;
         try {
             long size = file.length();
-            // Verificare limită rezonabilă pentru memorie (ex: 50 MB)
+            // Проверка разумного лимита размера файла в ОЗУ (до 50 МБ)
             if (size > 50 * 1024 * 1024) {
                 if (listener != null) {
-                    listener.onError("Fișierul depășește limita recomandată de 50 MB!");
+                    listener.onError("Размер файла превышает рекомендуемый лимит в 50 МБ!");
                 }
                 return false;
             }
@@ -191,14 +192,14 @@ public class ChatClient {
             return sendMessageDirect(msg);
         } catch (Exception e) {
             if (listener != null) {
-                listener.onError("Eroare la citirea fișierului: " + e.getMessage());
+                listener.onError("Ошибка при чтении файла: " + e.getMessage());
             }
             return false;
         }
     }
 
     /**
-     * Solicită trecerea într-o altă cameră de chat.
+     * Запрос на переключение в другую комнату чата.
      */
     public void joinRoom(String roomName) {
         if (!connected || roomName == null) return;
@@ -208,7 +209,7 @@ public class ChatClient {
     }
 
     /**
-     * Solicită crearea unei noi camere de chat.
+     * Запрос на создание новой комнаты чата.
      */
     public void createRoom(String roomName, String description) {
         if (!connected || roomName == null) return;
@@ -219,7 +220,7 @@ public class ChatClient {
     }
 
     /**
-     * Solicită istoricul mesajelor pentru o cameră.
+     * Запрос истории сообщений для комнаты.
      */
     public void requestHistory(String roomName) {
         if (!connected) return;
@@ -228,7 +229,7 @@ public class ChatClient {
     }
 
     /**
-     * Trimite un pachet către server în mod sincronizat.
+     * Потокобезопасная прямая отправка пакета в сокет.
      */
     private synchronized boolean sendMessageDirect(NetworkMessage msg) {
         if (!connected || out == null || socket.isClosed()) return false;
@@ -238,13 +239,13 @@ public class ChatClient {
             out.reset();
             return true;
         } catch (IOException e) {
-            disconnect("Eroare la transmiterea datelor către server.");
+            disconnect("Ошибка при передаче данных на сервер.");
             return false;
         }
     }
 
     /**
-     * Deconectare controlată.
+     * Корректное отключение от сервера с освобождением ресурсов.
      */
     public synchronized void disconnect(String reason) {
         if (!connected) return;

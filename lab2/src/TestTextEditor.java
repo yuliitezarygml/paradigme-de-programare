@@ -80,6 +80,10 @@ public class TestTextEditor {
             // Aplicăm Bold și culoare Roșie pe primul cuvânt "Text"
             SimpleAttributeSet attrs = new SimpleAttributeSet();
             StyleConstants.setBold(attrs, true);
+            StyleConstants.setItalic(attrs, true);
+            StyleConstants.setUnderline(attrs, true);
+            StyleConstants.setFontFamily(attrs, "Courier New");
+            StyleConstants.setFontSize(attrs, 28);
             StyleConstants.setForeground(attrs, Color.RED);
             doc.setCharacterAttributes(0, 4, attrs, false);
 
@@ -96,8 +100,14 @@ public class TestTextEditor {
 
             // Verificăm dacă stilul Bold s-a păstrat
             AttributeSet readAttrs = readPane.getStyledDocument().getCharacterElement(0).getAttributes();
-            boolean isBold = StyleConstants.isBold(readAttrs);
-            assertTrue("Păstrarea atributului Bold în fișierul RTF reîncărcat", isBold);
+            assertTrue("Păstrarea atributului Bold în fișierul RTF reîncărcat", StyleConstants.isBold(readAttrs));
+            assertTrue("Păstrarea Italic după redeschidere", StyleConstants.isItalic(readAttrs));
+            assertTrue("Păstrarea Underline după redeschidere", StyleConstants.isUnderline(readAttrs));
+            assertTrue("Păstrarea fontului după redeschidere",
+                    "Courier New".equals(StyleConstants.getFontFamily(readAttrs)));
+            assertTrue("Păstrarea mărimii fontului după redeschidere", StyleConstants.getFontSize(readAttrs) == 28);
+            assertTrue("Păstrarea culorii după redeschidere",
+                    Color.RED.equals(StyleConstants.getForeground(readAttrs)));
         } catch (Exception ex) {
             assertTrue("Eroare la testul RTF: " + ex.getMessage(), false);
         }

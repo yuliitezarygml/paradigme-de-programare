@@ -11,13 +11,13 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 /**
- * Interfața Grafică (GUI) Modernă a Clientului de Chat.
- * Implementează toate cerințele din laboratorul 3:
- * - a. Transmiterea și recepționarea mesajelor în rețea
- * - b. Afișarea istoriei mesajelor primite și căutare
- * - c. Răspuns la mesaj recepționat (Reply) cu bară vizuală de citare
- * - d. Transmiterea și descărcarea fișierelor
- * - e. Crearea și navigarea între Camere de Chat (Chat-rooms)
+ * Современный графический интерфейс (GUI) Клиента чата.
+ * Реализует все требования лабораторной работы №3:
+ * - a. Отправка и прием текстовых сообщений по сети (TCP сокеты)
+ * - b. Отображение истории принятых сообщений, поиск и экспорт
+ * - c. Возможность ответа на полученное сообщение (Reply) с визуальным цитированием
+ * - d. Передача и скачивание файлов через сеть
+ * - e. Создание и переключение между комнатами чата (Chat-rooms)
  */
 public class ClientGUI extends JFrame implements ClientListener {
 
@@ -25,14 +25,14 @@ public class ClientGUI extends JFrame implements ClientListener {
     private final List<NetworkMessage> receivedHistory = new ArrayList<>();
     private final List<ChatRoom> currentRooms = new ArrayList<>();
 
-    // Conexiune
+    // Элементы панели подключения
     private JTextField tfHost;
     private JTextField tfPort;
     private JTextField tfUsername;
     private JButton btnConnect;
     private JLabel statusBadge;
 
-    // Sidebar
+    // Боковая панель (Sidebar)
     private JPanel profilePanel;
     private JLabel lblUserInitials;
     private JLabel lblUsername;
@@ -41,26 +41,26 @@ public class ClientGUI extends JFrame implements ClientListener {
     private DefaultListModel<String> usersListModel;
     private JList<String> usersList;
 
-    // Chat principal
+    // Основная область чата
     private JLabel lblChatTitle;
     private JLabel lblChatSubtitle;
     private JPanel messagesContainer;
     private JScrollPane chatScrollPane;
 
-    // Panou Citat Răspuns (Reply Bar)
+    // Панель предварительного просмотра ответа (Reply Banner)
     private JPanel replyBanner;
     private JLabel lblReplyInfo;
     private JButton btnCancelReply;
     private NetworkMessage activeReplyTarget = null;
 
-    // Câmp de intrare
+    // Панель ввода сообщений
     private JTextField tfInput;
     private JButton btnSend;
     private JButton btnSendFile;
     private JButton btnHistory;
 
     public ClientGUI() {
-        super("Chat Rețea Locală (Lab 3)");
+        super("Клиент локального чата (Лабораторная 3)");
         this.client = new ChatClient();
         this.client.setListener(this);
 
@@ -75,10 +75,10 @@ public class ClientGUI extends JFrame implements ClientListener {
         getContentPane().setBackground(UITheme.BG_DARKER);
         setLayout(new BorderLayout());
 
-        // 1. Bara de conectare de sus
+        // 1. Верхняя панель подключения к серверу
         add(createConnectionBar(), BorderLayout.NORTH);
 
-        // 2. Corpul Principal: Sidebar (Stânga) + Chat (Centru)
+        // 2. Основная рабочая область: Боковое меню (Слева) + Область чата (Центр)
         JPanel mainBody = new JPanel(new BorderLayout());
         mainBody.setBackground(UITheme.BG_DARKER);
 
@@ -87,12 +87,12 @@ public class ClientGUI extends JFrame implements ClientListener {
 
         add(mainBody, BorderLayout.CENTER);
 
-        // Închidere sigură la ieșire
+        // Безопасное отключение от сервера при закрытии окна крестиком
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 if (client.isConnected()) {
-                    client.disconnect("Clientul a închis aplicația.");
+                    client.disconnect("Клиент закрыл приложение.");
                 }
             }
         });
@@ -100,24 +100,27 @@ public class ClientGUI extends JFrame implements ClientListener {
         updateConnectedState(false);
     }
 
+    /**
+     * Создает верхнюю панель с параметрами подключения (IP сервера, порт, имя пользователя).
+     */
     private JPanel createConnectionBar() {
         JPanel bar = new JPanel(new BorderLayout(10, 0));
         bar.setBackground(UITheme.BG_SIDEBAR);
         bar.setBorder(new EmptyBorder(10, 16, 10, 16));
 
-        // Stânga: Logo & Titlu
+        // Слева: Логотип и название
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         left.setOpaque(false);
         JLabel lblLogo = new JLabel("💬");
         lblLogo.setFont(new Font("SansSerif", Font.PLAIN, 20));
-        JLabel lblTitle = new JLabel("CHAT LOCAL LAN");
+        JLabel lblTitle = new JLabel("ЛОКАЛЬНЫЙ ЧАТ LAN");
         lblTitle.setFont(UITheme.FONT_TITLE);
         lblTitle.setForeground(UITheme.TEXT_PRIMARY);
         left.add(lblLogo);
         left.add(lblTitle);
         bar.add(left, BorderLayout.WEST);
 
-        // Dreapta: Setări conectare
+        // Справа: Поля ввода настроек и кнопка подключения
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
 
@@ -125,29 +128,29 @@ public class ClientGUI extends JFrame implements ClientListener {
         lblH.setFont(UITheme.FONT_BOLD);
         lblH.setForeground(UITheme.TEXT_MUTED);
 
-        tfHost = UITheme.createTextField("IP Server");
+        tfHost = UITheme.createTextField("IP Сервера");
         tfHost.setText("127.0.0.1");
         tfHost.setPreferredSize(new Dimension(110, 32));
 
-        JLabel lblP = new JLabel("Port:");
+        JLabel lblP = new JLabel("Порт:");
         lblP.setFont(UITheme.FONT_BOLD);
         lblP.setForeground(UITheme.TEXT_MUTED);
 
-        tfPort = UITheme.createTextField("Port");
+        tfPort = UITheme.createTextField("Порт");
         tfPort.setText("8888");
         tfPort.setPreferredSize(new Dimension(65, 32));
 
-        JLabel lblU = new JLabel("Nume:");
+        JLabel lblU = new JLabel("Имя:");
         lblU.setFont(UITheme.FONT_BOLD);
         lblU.setForeground(UITheme.TEXT_MUTED);
 
-        tfUsername = UITheme.createTextField("Numele tău");
-        tfUsername.setText("Student_" + (int)(Math.random() * 900 + 100));
+        tfUsername = UITheme.createTextField("Ваш никнейм");
+        tfUsername.setText("Студент_" + (int)(Math.random() * 900 + 100));
         tfUsername.setPreferredSize(new Dimension(130, 32));
 
-        statusBadge = UITheme.createStatusBadge("● DECONECTAT", UITheme.DANGER, Color.WHITE);
+        statusBadge = UITheme.createStatusBadge("● ОТКЛЮЧЕН", UITheme.DANGER, Color.WHITE);
 
-        btnConnect = UITheme.createPrimaryButton("Conectare");
+        btnConnect = UITheme.createPrimaryButton("Подключиться");
         btnConnect.addActionListener(e -> toggleConnection());
 
         right.add(statusBadge);
@@ -163,13 +166,16 @@ public class ClientGUI extends JFrame implements ClientListener {
         return bar;
     }
 
+    /**
+     * Создает боковую панель: Профиль пользователя, список комнат и участники онлайн.
+     */
     private JPanel createSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout(0, 10));
         sidebar.setBackground(UITheme.BG_SIDEBAR);
         sidebar.setPreferredSize(new Dimension(240, 0));
         sidebar.setBorder(new EmptyBorder(12, 10, 12, 10));
 
-        // Panou profil utilizator
+        // Панель профиля пользователя
         profilePanel = new JPanel(new BorderLayout(10, 0));
         profilePanel.setBackground(UITheme.BG_CARD);
         profilePanel.setBorder(new EmptyBorder(8, 10, 8, 10));
@@ -189,7 +195,7 @@ public class ClientGUI extends JFrame implements ClientListener {
         lblUserInitials.setFont(UITheme.FONT_BOLD);
         lblUserInitials.setForeground(Color.WHITE);
 
-        lblUsername = new JLabel("Deconectat");
+        lblUsername = new JLabel("Отключен");
         lblUsername.setFont(UITheme.FONT_BOLD);
         lblUsername.setForeground(UITheme.TEXT_PRIMARY);
 
@@ -197,17 +203,17 @@ public class ClientGUI extends JFrame implements ClientListener {
         profilePanel.add(lblUsername, BorderLayout.CENTER);
         sidebar.add(profilePanel, BorderLayout.NORTH);
 
-        // Centru: Camere și Utilizatori
+        // Центральная часть: Списки комнат и пользователей онлайн
         JPanel listsPanel = new JPanel(new GridLayout(2, 1, 0, 10));
         listsPanel.setOpaque(false);
 
-        // Secțiunea Camere
+        // Секция комнат чата
         JPanel roomsSection = new JPanel(new BorderLayout(0, 6));
         roomsSection.setOpaque(false);
 
         JPanel roomsHeader = new JPanel(new BorderLayout());
         roomsHeader.setOpaque(false);
-        JLabel lblRooms = new JLabel("CAMERE CHAT");
+        JLabel lblRooms = new JLabel("КОМНАТЫ ЧАТА");
         lblRooms.setFont(UITheme.FONT_TINY);
         lblRooms.setForeground(UITheme.TEXT_MUTED);
 
@@ -218,7 +224,7 @@ public class ClientGUI extends JFrame implements ClientListener {
                 super.paintComponent(g);
             }
         };
-        btnAddRoom.setToolTipText("Creează o cameră nouă de discuție");
+        btnAddRoom.setToolTipText("Создать новую комнату для общения");
         btnAddRoom.setFont(UITheme.FONT_BOLD);
         btnAddRoom.setForeground(UITheme.TEXT_PRIMARY);
         btnAddRoom.setBackground(UITheme.BG_INPUT);
@@ -249,11 +255,11 @@ public class ClientGUI extends JFrame implements ClientListener {
         roomsSection.add(roomsScroll, BorderLayout.CENTER);
         listsPanel.add(roomsSection);
 
-        // Secțiunea Utilizatori Online
+        // Секция пользователей онлайн в текущей комнате
         JPanel usersSection = new JPanel(new BorderLayout(0, 6));
         usersSection.setOpaque(false);
 
-        JLabel lblUsers = new JLabel("MEMBRI ÎN CAMERĂ");
+        JLabel lblUsers = new JLabel("УЧАСТНИКИ В КОМНАТЕ");
         lblUsers.setFont(UITheme.FONT_TINY);
         lblUsers.setForeground(UITheme.TEXT_MUTED);
         usersSection.add(lblUsers, BorderLayout.NORTH);
@@ -271,11 +277,14 @@ public class ClientGUI extends JFrame implements ClientListener {
         return sidebar;
     }
 
+    /**
+     * Создает основную область сообщений чата, заголовок и панель ввода.
+     */
     private JPanel createChatArea() {
         JPanel chatPanel = new JPanel(new BorderLayout(0, 0));
         chatPanel.setBackground(UITheme.BG_CHAT);
 
-        // Antet Chat (Nume cameră, Descriere, Buton Istoric)
+        // Заголовок чата (Название комнаты, описание, кнопка истории)
         JPanel header = new JPanel(new BorderLayout(10, 0));
         header.setBackground(UITheme.BG_SIDEBAR);
         header.setBorder(new EmptyBorder(10, 16, 10, 16));
@@ -287,7 +296,7 @@ public class ClientGUI extends JFrame implements ClientListener {
         lblChatTitle.setFont(UITheme.FONT_TITLE);
         lblChatTitle.setForeground(UITheme.TEXT_PRIMARY);
 
-        lblChatSubtitle = new JLabel("Camera principală de discuție");
+        lblChatSubtitle = new JLabel("Основная комната общения");
         lblChatSubtitle.setFont(UITheme.FONT_SMALL);
         lblChatSubtitle.setForeground(UITheme.TEXT_MUTED);
 
@@ -295,15 +304,15 @@ public class ClientGUI extends JFrame implements ClientListener {
         headerLeft.add(lblChatSubtitle);
         header.add(headerLeft, BorderLayout.WEST);
 
-        // Buton Istoric în antet (Cerința b)
-        btnHistory = UITheme.createSecondaryButton("📜 Istoric Mesaje");
-        btnHistory.setToolTipText("Deschide și caută în istoricul mesajelor primite");
+        // Кнопка истории в шапке (Требование b)
+        btnHistory = UITheme.createSecondaryButton("📜 История Сообщений");
+        btnHistory.setToolTipText("Открыть и выполнить поиск в истории сообщений");
         btnHistory.addActionListener(e -> openHistoryDialog());
         header.add(btnHistory, BorderLayout.EAST);
 
         chatPanel.add(header, BorderLayout.NORTH);
 
-        // Zonă de mesaje cu bule
+        // Область скролла для пузырей сообщений
         messagesContainer = new JPanel();
         messagesContainer.setLayout(new BoxLayout(messagesContainer, BoxLayout.Y_AXIS));
         messagesContainer.setBackground(UITheme.BG_CHAT);
@@ -314,15 +323,15 @@ public class ClientGUI extends JFrame implements ClientListener {
         chatScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         chatPanel.add(chatScrollPane, BorderLayout.CENTER);
 
-        // Partea inferioară: Bară de Reply + Bară de Intrare
+        // Нижняя область: Плашка Reply + Панель ввода сообщения
         JPanel bottomArea = new JPanel(new BorderLayout());
         bottomArea.setOpaque(false);
 
-        // Bară Reply (inițial ascunsă)
+        // Плашка цитирования (скрыта по умолчанию)
         replyBanner = createReplyBanner();
         bottomArea.add(replyBanner, BorderLayout.NORTH);
 
-        // Bară de introducere mesaj
+        // Панель отправки текста и файлов
         JPanel inputBar = createInputBar();
         bottomArea.add(inputBar, BorderLayout.SOUTH);
 
@@ -331,7 +340,7 @@ public class ClientGUI extends JFrame implements ClientListener {
     }
 
     /**
-     * Construiește bara de previzualizare a răspunsului (Reply Banner).
+     * Создает панель предпросмотра цитаты ответа (Reply Banner).
      */
     private JPanel createReplyBanner() {
         JPanel banner = new JPanel(new BorderLayout(8, 0)) {
@@ -349,7 +358,7 @@ public class ClientGUI extends JFrame implements ClientListener {
         banner.setBorder(new EmptyBorder(6, 14, 6, 14));
         banner.setVisible(false);
 
-        lblReplyInfo = new JLabel("↳ Răspuns către @User: \"...\"");
+        lblReplyInfo = new JLabel("↳ Ответ пользователю @User: \"...\"");
         lblReplyInfo.setFont(UITheme.FONT_SMALL);
         lblReplyInfo.setForeground(UITheme.TEXT_PRIMARY);
         banner.add(lblReplyInfo, BorderLayout.CENTER);
@@ -361,7 +370,7 @@ public class ClientGUI extends JFrame implements ClientListener {
                 super.paintComponent(g);
             }
         };
-        btnCancelReply.setToolTipText("Anulează răspunsul");
+        btnCancelReply.setToolTipText("Отменить ответ");
         btnCancelReply.setFont(UITheme.FONT_BOLD);
         btnCancelReply.setForeground(UITheme.TEXT_MUTED);
         btnCancelReply.setContentAreaFilled(false);
@@ -374,19 +383,22 @@ public class ClientGUI extends JFrame implements ClientListener {
         return banner;
     }
 
+    /**
+     * Создает панель ввода сообщения с кнопками отправки файла и текста.
+     */
     private JPanel createInputBar() {
         JPanel bar = new JPanel(new BorderLayout(8, 0));
         bar.setBackground(UITheme.BG_SIDEBAR);
         bar.setBorder(new EmptyBorder(10, 14, 10, 14));
 
-        btnSendFile = UITheme.createSecondaryButton("📎 Fișier");
-        btnSendFile.setToolTipText("Trimite un fișier în camera curentă");
+        btnSendFile = UITheme.createSecondaryButton("📎 Файл");
+        btnSendFile.setToolTipText("Отправить файл в текущую комнату");
         btnSendFile.addActionListener(e -> chooseAndSendFile());
 
-        tfInput = UITheme.createTextField("Scrie un mesaj aici... (Enter pentru a trimite)");
+        tfInput = UITheme.createTextField("Введите сообщение... (Enter для отправки)");
         tfInput.addActionListener(e -> sendMessage());
 
-        btnSend = UITheme.createPrimaryButton("Trimite ✈");
+        btnSend = UITheme.createPrimaryButton("Отправить ✈");
         btnSend.addActionListener(e -> sendMessage());
 
         bar.add(btnSendFile, BorderLayout.WEST);
@@ -426,28 +438,28 @@ public class ClientGUI extends JFrame implements ClientListener {
         });
     }
 
-    // --- Operațiuni Utilizator ---
+    // --- Действия и обработчики событий пользователя ---
 
     private void toggleConnection() {
         if (client.isConnected()) {
-            client.disconnect("Deconectat de utilizator.");
+            client.disconnect("Отключено пользователем.");
         } else {
             String host = tfHost.getText().trim();
             int port;
             try {
                 port = Integer.parseInt(tfPort.getText().trim());
             } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, "Portul trebuie să fie un număr valid!", "Eroare", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Порт должен быть корректным числом!", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             String user = tfUsername.getText().trim();
             if (user.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Introduceți un nume de utilizator!", "Eroare", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Введите имя пользователя!", "Ошибка", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             btnConnect.setEnabled(false);
-            btnConnect.setText("Se conectează...");
+            btnConnect.setText("Подключение...");
             client.connect(host, port, user);
         }
     }
@@ -487,16 +499,16 @@ public class ClientGUI extends JFrame implements ClientListener {
     private void promptCreateRoom() {
         if (!client.isConnected()) return;
 
-        JTextField nameField = UITheme.createTextField("ex: laborator3-grupa");
-        JTextField descField = UITheme.createTextField("ex: Camera de lucru pentru laborator");
+        JTextField nameField = UITheme.createTextField("например: laborator3-grupa");
+        JTextField descField = UITheme.createTextField("например: Рабочая комната для лабораторной");
 
         JPanel form = new JPanel(new GridLayout(4, 1, 0, 4));
-        form.add(new JLabel("Numele camerei (va începe cu #):"));
+        form.add(new JLabel("Название комнаты (префикс # добавится автоматически):"));
         form.add(nameField);
-        form.add(new JLabel("Descriere:"));
+        form.add(new JLabel("Описание:"));
         form.add(descField);
 
-        int opt = JOptionPane.showConfirmDialog(this, form, "Creare Chat-Room Nou", JOptionPane.OK_CANCEL_OPTION);
+        int opt = JOptionPane.showConfirmDialog(this, form, "Создание новой комнаты чата", JOptionPane.OK_CANCEL_OPTION);
         if (opt == JOptionPane.OK_OPTION) {
             String name = nameField.getText().trim();
             String desc = descField.getText().trim();
@@ -507,11 +519,11 @@ public class ClientGUI extends JFrame implements ClientListener {
     }
 
     /**
-     * Declanșează starea de Răspuns (Reply) pentru mesajul selectat.
+     * Активирует режим ответа на выбранное сообщение (Reply).
      */
     public void startReply(NetworkMessage targetMsg) {
         this.activeReplyTarget = targetMsg;
-        lblReplyInfo.setText("↳ Răspuns către @" + targetMsg.getSender() + ": \"" + getSnippet(targetMsg) + "\"");
+        lblReplyInfo.setText("↳ Ответ пользователю @" + targetMsg.getSender() + ": \"" + getSnippet(targetMsg) + "\"");
         replyBanner.setVisible(true);
         tfInput.requestFocusInWindow();
         revalidate();
@@ -527,7 +539,7 @@ public class ClientGUI extends JFrame implements ClientListener {
 
     private String getSnippet(NetworkMessage msg) {
         if (msg.isFile()) {
-            return "Fișier: " + msg.getFileName();
+            return "Файл: " + msg.getFileName();
         }
         String t = msg.getText();
         if (t == null) return "";
@@ -558,10 +570,10 @@ public class ClientGUI extends JFrame implements ClientListener {
 
     private void updateConnectedState(boolean connected) {
         btnConnect.setEnabled(true);
-        btnConnect.setText(connected ? "Deconectare" : "Conectare");
+        btnConnect.setText(connected ? "Отключиться" : "Подключиться");
         btnConnect.setBackground(connected ? UITheme.DANGER : UITheme.ACCENT);
 
-        statusBadge.setText(connected ? "● ONLINE" : "● DECONECTAT");
+        statusBadge.setText(connected ? "● ОНЛАЙН" : "● ОТКЛЮЧЕН");
         statusBadge.setBackground(connected ? UITheme.SUCCESS : UITheme.DANGER);
 
         tfHost.setEnabled(!connected);
@@ -574,7 +586,7 @@ public class ClientGUI extends JFrame implements ClientListener {
         btnHistory.setEnabled(connected);
 
         if (!connected) {
-            lblUsername.setText("Deconectat");
+            lblUsername.setText("Отключен");
             lblUserInitials.setText("??");
             roomsListModel.clear();
             usersListModel.clear();
@@ -584,7 +596,7 @@ public class ClientGUI extends JFrame implements ClientListener {
         }
     }
 
-    // --- Implementare ClientListener ---
+    // --- Реализация интерфейса ClientListener (обратные вызовы сетевых событий) ---
 
     @Override
     public void onConnected(String username, List<ChatRoom> rooms, List<String> roomUsers, List<NetworkMessage> initialHistory) {
@@ -600,7 +612,7 @@ public class ClientGUI extends JFrame implements ClientListener {
     public void onConnectionFailed(String error) {
         SwingUtilities.invokeLater(() -> {
             updateConnectedState(false);
-            JOptionPane.showMessageDialog(this, error, "Eroare Conectare", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, error, "Ошибка подключения", JOptionPane.ERROR_MESSAGE);
         });
     }
 
@@ -609,7 +621,7 @@ public class ClientGUI extends JFrame implements ClientListener {
         SwingUtilities.invokeLater(() -> {
             updateConnectedState(false);
             if (reason != null && !reason.isEmpty()) {
-                JOptionPane.showMessageDialog(this, reason, "Deconectat", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, reason, "Отключено", JOptionPane.INFORMATION_MESSAGE);
             }
         });
     }
@@ -690,7 +702,7 @@ public class ClientGUI extends JFrame implements ClientListener {
     @Override
     public void onError(String error) {
         SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(this, error, "Atenție", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, error, "Внимание", JOptionPane.WARNING_MESSAGE);
         });
     }
 }

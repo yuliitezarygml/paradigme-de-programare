@@ -3,27 +3,27 @@ package common;
 import java.io.Serializable;
 
 /**
- * Tipurile de mesaje transmise prin protocolul de rețea.
- * Tipuri de evenimente suportate între Server și Client.
+ * Типы сетевых сообщений, передаваемых по протоколу взаимодействия.
+ * Описывает все поддерживаемые события между Сервером и Клиентом.
  */
 public enum MessageType implements Serializable {
-    CONNECT,              // Clientul solicită conectarea cu un username
-    CONNECT_ACK,          // Serverul confirmă conectarea și trimite starea inițială
-    DISCONNECT,           // Clientul se deconectează voluntar
+    CONNECT,              // Клиент запрашивает подключение с указанием имени пользователя (username)
+    CONNECT_ACK,          // Сервер подтверждает подключение и отправляет начальное состояние (комнаты, пользователи)
+    DISCONNECT,           // Клиент добровольно отключается от сервера
     
-    CHAT_MESSAGE,         // Mesaj text normal de chat
-    FILE_TRANSFER,        // Transfer de fișier binar
+    CHAT_MESSAGE,         // Обычное текстовое сообщение в чате
+    FILE_TRANSFER,        // Передача бинарного файла через сеть
     
-    CREATE_ROOM,          // Cerere de creare a unei noi camere de chat
-    DELETE_ROOM,          // Cerere de ștergere a unei camere de chat
-    JOIN_ROOM,            // Clientul trece într-o altă cameră
-    ROOM_LIST,            // Actualizare a listei camerelor disponibile
-    USER_LIST,            // Lista utilizatorilor conectați în camera curentă
+    CREATE_ROOM,          // Запрос на создание новой комнаты чата
+    DELETE_ROOM,          // Запрос на удаление существующей комнаты чата
+    JOIN_ROOM,            // Клиент переходит в другую комнату чата
+    ROOM_LIST,            // Обновление списка доступных комнат для всех клиентов
+    USER_LIST,            // Список пользователей, находящихся в текущей комнате
     
-    HISTORY_REQUEST,      // Solicitare de istoric pentru o cameră
-    HISTORY_RESPONSE,     // Răspuns cu istoricul mesajelor din cameră
+    HISTORY_REQUEST,      // Запрос истории сообщений для конкретной комнаты
+    HISTORY_RESPONSE,     // Ответ сервера с историей сообщений для комнаты
     
-    SERVER_NOTIFICATION,  // Notificare de sistem (ex: utilizator conectat/deconectat)
-    ERROR,                // Mesaj de eroare
-    KICK                  // Serverul a deconectat forțat clientul
+    SERVER_NOTIFICATION,  // Системное уведомление (например: подключение/отключение пользователя)
+    ERROR,                // Сообщение об ошибке
+    KICK                  // Сервер принудительно отключил клиента (бан / кик)
 }

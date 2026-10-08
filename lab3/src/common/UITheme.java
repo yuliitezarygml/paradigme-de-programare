@@ -9,45 +9,45 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 
 /**
- * Gestionar centralizat pentru design-ul modern al interfeței grafice (UI).
- * Oferă o paletă elegantă Dark/Slate (inspirată din aplicații moderne precum Discord / Slack / Telegram),
- * butoane rotunjite, bare de defilare personalizate și randare antialiasing fină.
+ * Централизованный класс управления современным графическим оформлением интерфейса (UI).
+ * Предоставляет элегантную темную палитру Dark/Slate (в стиле Discord / Slack / Telegram),
+ * скругленные кнопки, кастомные полосы прокрутки и сглаживание шрифтов (antialiasing).
  */
 public class UITheme {
 
-    // --- Paleta de Culori (Modern Dark / Slate) ---
-    public static final Color BG_DARKER      = new Color(0x11, 0x12, 0x14); // Bara superioară sau cel mai întunecat fundal
-    public static final Color BG_SIDEBAR     = new Color(0x1E, 0x1F, 0x22); // Sidebar camere și utilizatori
-    public static final Color BG_CHAT        = new Color(0x2B, 0x2D, 0x31); // Zona de mesaje
-    public static final Color BG_CARD        = new Color(0x23, 0x24, 0x28); // Panouri, carduri, item-uri listă
-    public static final Color BG_INPUT       = new Color(0x38, 0x3A, 0x40); // Câmpuri de text
-    public static final Color BG_INPUT_FOCUS = new Color(0x40, 0x42, 0x49); // Câmpuri de text la focus
-    public static final Color BORDER_SUBTLE  = new Color(0x3F, 0x41, 0x47); // Linii despărțitoare subtile
+    // --- Цветовая палитра (Modern Dark / Slate) ---
+    public static final Color BG_DARKER      = new Color(0x11, 0x12, 0x14); // Самый глубокий темный фон / верхняя панель
+    public static final Color BG_SIDEBAR     = new Color(0x1E, 0x1F, 0x22); // Боковая панель комнат и пользователей
+    public static final Color BG_CHAT        = new Color(0x2B, 0x2D, 0x31); // Основная область переписки
+    public static final Color BG_CARD        = new Color(0x23, 0x24, 0x28); // Карточки, панели, элементы списков
+    public static final Color BG_INPUT       = new Color(0x38, 0x3A, 0x40); // Текстовые поля ввода
+    public static final Color BG_INPUT_FOCUS = new Color(0x40, 0x42, 0x49); // Текстовое поле в фокусе
+    public static final Color BORDER_SUBTLE  = new Color(0x3F, 0x41, 0x47); // Тонкие разделительные линии
 
-    // Accente și culori de stare
-    public static final Color ACCENT         = new Color(0x58, 0x65, 0xF2); // Blurple / Indigo modern
-    public static final Color ACCENT_HOVER   = new Color(0x47, 0x52, 0xC4);
-    public static final Color ACCENT_LIGHT   = new Color(0x79, 0x83, 0xF5);
-    public static final Color SUCCESS        = new Color(0x23, 0xA5, 0x5A); // Verde activ / online
+    // Акцентные цвета и индикаторы состояния
+    public static final Color ACCENT         = new Color(0x58, 0x65, 0xF2); // Фирменный Blurple / современный индиго
+    public static final Color ACCENT_HOVER   = new Color(0x47, 0x52, 0xC4); // Цвет при наведении
+    public static final Color ACCENT_LIGHT   = new Color(0x79, 0x83, 0xF5); // Светлый акцент
+    public static final Color SUCCESS        = new Color(0x23, 0xA5, 0x5A); // Зеленый: активен / онлайн / успешно
     public static final Color SUCCESS_HOVER  = new Color(0x1C, 0x8B, 0x4B);
-    public static final Color DANGER         = new Color(0xF2, 0x3F, 0x43); // Roșu deconectare / ștergere
+    public static final Color DANGER         = new Color(0xF2, 0x3F, 0x43); // Красный: ошибка / отключение / удаление
     public static final Color DANGER_HOVER   = new Color(0xD8, 0x30, 0x34);
-    public static final Color WARNING        = new Color(0xFA, 0xA6, 0x1A); // Galben atenționare
-    public static final Color INFO           = new Color(0x00, 0xA8, 0xFC); // Albastru info
+    public static final Color WARNING        = new Color(0xFA, 0xA6, 0x1A); // Желтый / оранжевый: предупреждение
+    public static final Color INFO           = new Color(0x00, 0xA8, 0xFC); // Голубой: информационные события
 
-    // Bule de mesaje
-    public static final Color BUBBLE_SELF    = new Color(0x3B, 0x42, 0x6A); // Mesaje proprii (indigo discret)
-    public static final Color BUBBLE_OTHER   = new Color(0x31, 0x33, 0x38); // Mesaje de la ceilalți
-    public static final Color BUBBLE_BORDER  = new Color(0x40, 0x42, 0x49);
-    public static final Color QUOTE_BG       = new Color(0x1E, 0x1F, 0x22); // Citat reply
-    public static final Color FILE_CARD_BG   = new Color(0x20, 0x22, 0x25); // Card transfer fișier
+    // Пузыри сообщений (Message Bubbles)
+    public static final Color BUBBLE_SELF    = new Color(0x3B, 0x42, 0x6A); // Собственные сообщения (сдержанный индиго)
+    public static final Color BUBBLE_OTHER   = new Color(0x31, 0x33, 0x38); // Сообщения собеседников
+    public static final Color BUBBLE_BORDER  = new Color(0x40, 0x42, 0x49); // Граница пузыря
+    public static final Color QUOTE_BG       = new Color(0x1E, 0x1F, 0x22); // Фон плашки цитирования (Reply)
+    public static final Color FILE_CARD_BG   = new Color(0x20, 0x22, 0x25); // Фон карточки передачи файла
 
-    // Tipografie și text
-    public static final Color TEXT_PRIMARY   = new Color(0xF2, 0xF3, 0xF5); // Text principal alb discret
-    public static final Color TEXT_MUTED     = new Color(0x94, 0x9B, 0xA4); // Text secundar / timestamp
-    public static final Color TEXT_ACCENT    = new Color(0xDB, 0xDE, 0xE1); // Text etichete
+    // Типографика и цвета текста
+    public static final Color TEXT_PRIMARY   = new Color(0xF2, 0xF3, 0xF5); // Основной четкий светлый текст
+    public static final Color TEXT_MUTED     = new Color(0x94, 0x9B, 0xA4); // Вторичный приглушенный текст / время
+    public static final Color TEXT_ACCENT    = new Color(0xDB, 0xDE, 0xE1); // Выделенный текст
 
-    // Fonturi optimizate pentru ecran
+    // Оптимизированные системные шрифты
     public static final Font FONT_TITLE   = new Font("SansSerif", Font.BOLD, 15);
     public static final Font FONT_HEADER  = new Font("SansSerif", Font.BOLD, 13);
     public static final Font FONT_REGULAR = new Font("SansSerif", Font.PLAIN, 13);
@@ -55,7 +55,7 @@ public class UITheme {
     public static final Font FONT_SMALL   = new Font("SansSerif", Font.PLAIN, 11);
     public static final Font FONT_TINY    = new Font("SansSerif", Font.BOLD, 10);
 
-    // Culori avatar plăcute
+    // Палитра приятных оттенков для аватарок пользователей
     private static final Color[] AVATAR_COLORS = {
             new Color(0xE9, 0x1E, 0x63),
             new Color(0x9C, 0x27, 0xB0),
@@ -69,7 +69,7 @@ public class UITheme {
     };
 
     /**
-     * Activează antialiasing pentru randare fluidă de text și forme geometrice.
+     * Включает аппаратное сглаживание графики и шрифтов (Antialiasing).
      */
     public static void enableAntiAliasing(Graphics g) {
         if (g instanceof Graphics2D) {
@@ -80,7 +80,7 @@ public class UITheme {
     }
 
     /**
-     * Obține culoarea avatarului determinist după numele de utilizator.
+     * Возвращает уникальный цвет аватарки на основе хеш-кода имени пользователя.
      */
     public static Color getAvatarColor(String username) {
         if (username == null || username.isEmpty()) return AVATAR_COLORS[0];
@@ -89,7 +89,7 @@ public class UITheme {
     }
 
     /**
-     * Extrage inițialele numelui de utilizator (ex: "Alex Popescu" -> "AP", "User" -> "US").
+     * Извлекает 1-2 заглавные буквы для инициалов аватарки (например, "Alex Popescu" -> "AP").
      */
     public static String getInitials(String username) {
         if (username == null || username.trim().isEmpty()) return "??";
@@ -105,7 +105,7 @@ public class UITheme {
     }
 
     /**
-     * Creează un buton modern rotunjit cu efecte hover.
+     * Создает современную скругленную кнопку с эффектом наведения курсора (Hover).
      */
     public static JButton createButton(String text, Color bg, Color hoverBg, Color fg) {
         JButton btn = new JButton(text) {
@@ -133,35 +133,35 @@ public class UITheme {
     }
 
     /**
-     * Creează un buton primar accentuat (Indigo/Blurple).
+     * Создает главную акцентную кнопку (Blurple / Indigo).
      */
     public static JButton createPrimaryButton(String text) {
         return createButton(text, ACCENT, ACCENT_HOVER, TEXT_PRIMARY);
     }
 
     /**
-     * Creează un buton de succes (Verde).
+     * Создает кнопку успешного действия (Зеленая).
      */
     public static JButton createSuccessButton(String text) {
         return createButton(text, SUCCESS, SUCCESS_HOVER, TEXT_PRIMARY);
     }
 
     /**
-     * Creează un buton de pericol (Roșu).
+     * Создает кнопку опасного действия / отмены / остановки (Красная).
      */
     public static JButton createDangerButton(String text) {
         return createButton(text, DANGER, DANGER_HOVER, TEXT_PRIMARY);
     }
 
     /**
-     * Creează un buton secundar discret (Gri).
+     * Создает нейтральную вторичную кнопку (Темно-серая).
      */
     public static JButton createSecondaryButton(String text) {
         return createButton(text, BG_INPUT, BG_INPUT_FOCUS, TEXT_PRIMARY);
     }
 
     /**
-     * Configurează un JTextField cu design modern întunecat și margini rotunjite.
+     * Настраивает поле ввода JTextField со стильным скруглением и подсказкой (placeholder).
      */
     public static JTextField createTextField(String placeholder) {
         JTextField tf = new JTextField() {
@@ -197,7 +197,7 @@ public class UITheme {
     }
 
     /**
-     * Creează un badge/pastilă de stare (pill) cu text și fundal colorat.
+     * Создает компактный овальный бейдж статуса (Status Pill).
      */
     public static JLabel createStatusBadge(String text, Color bg, Color fg) {
         JLabel badge = new JLabel(text, SwingConstants.CENTER) {
@@ -219,7 +219,7 @@ public class UITheme {
     }
 
     /**
-     * Aplică bara de defilare (scroll bar) modernă pe un JScrollPane.
+     * Применяет современный минималистичный скроллбар к JScrollPane.
      */
     public static void applyModernScrollBar(JScrollPane scrollPane) {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -231,7 +231,7 @@ public class UITheme {
     }
 
     /**
-     * Implementare de bară de defilare minimalistă, elegantă.
+     * Реализация тонкой аккуратной полосы прокрутки без громоздких стрелок.
      */
     private static class ModernScrollBarUI extends BasicScrollBarUI {
         @Override

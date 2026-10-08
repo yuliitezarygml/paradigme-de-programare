@@ -8,10 +8,9 @@ import java.awt.RenderingHints;
 import javax.swing.plaf.basic.BasicTabbedPaneUI;
 
 /**
- * CustomTabbedPaneUI oferă un aspect curat, modern și aliniat la STÂNGA pentru file (tabs).
- *
- * Rezolvă complet problema trunchierii titlurilor ("...") prin calcularea
- * lățimii reale a componentei de antet (titlu + butonul de închidere).
+ * Только рисует вкладки (цвет и скругление).
+ * Создать, закрыть и сохранить вкладку — это TextEditor, не этот класс.
+ * На защите его можно не разбирать.
  */
 public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
 

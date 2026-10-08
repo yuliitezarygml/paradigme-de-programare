@@ -13,13 +13,13 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 /**
- * Componentă vizuală modernă pentru afișarea unui mesaj de chat.
- * Suportă:
- * - Avatar colorat cu inițiale
- * - Diferențiere mesaje proprii (Self) vs ceilalți utilizatori
- * - Casetă de citat pentru Răspuns (Reply)
- * - Card interactiv pentru transfer și descărcare fișiere
- * - Buton acțiune "Răspunde" (Reply)
+ * Современный визуальный компонент для отображения пузыря сообщения в чате (Message Bubble).
+ * Поддерживает:
+ * - Цветной круглый аватар с инициалами пользователя
+ * - Раздельное оформление собственных сообщений (Self) и сообщений собеседников
+ * - Блок цитирования исходного сообщения при ответе (Reply)
+ * - Интерактивную карточку передачи и скачивания файлов
+ * - Кнопку действия "Ответить" (Reply)
  */
 public class MessageBubblePanel extends JPanel {
 
@@ -37,7 +37,7 @@ public class MessageBubblePanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(new EmptyBorder(6, 12, 6, 12));
 
-        if ("SISTEM".equalsIgnoreCase(message.getSender())) {
+        if ("СИСТЕМА".equalsIgnoreCase(message.getSender()) || "SISTEM".equalsIgnoreCase(message.getSender())) {
             buildSystemNotification();
         } else {
             buildStandardBubble();
@@ -45,7 +45,7 @@ public class MessageBubblePanel extends JPanel {
     }
 
     /**
-     * Construiește o notificare de sistem centrată (pastilă / pill).
+     * Создает аккуратную центрированную плашку системного уведомления.
      */
     private void buildSystemNotification() {
         JPanel centerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -76,17 +76,17 @@ public class MessageBubblePanel extends JPanel {
     }
 
     /**
-     * Construiește bula modernă de mesaj cu avatar, antet, citat reply și conținut.
+     * Формирует стандартный пузырь сообщения с аватаром, шапкой, цитатой ответа и содержимым.
      */
     private void buildStandardBubble() {
         JPanel rowPanel = new JPanel(new BorderLayout(10, 0));
         rowPanel.setOpaque(false);
 
-        // 1. Avatar rotund în stânga
+        // 1. Круглый аватар с инициалами слева
         JPanel avatarPanel = createAvatarPanel(message.getSender());
         rowPanel.add(avatarPanel, BorderLayout.WEST);
 
-        // 2. Conținutul bulei (Header + Reply Quote + Text/File)
+        // 2. Тело пузыря (Заголовок + Цитата Reply + Текст или Карточка файла)
         JPanel bubbleBox = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -103,11 +103,11 @@ public class MessageBubblePanel extends JPanel {
         bubbleBox.setLayout(new BoxLayout(bubbleBox, BoxLayout.Y_AXIS));
         bubbleBox.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        // Antet: Nume + Timp + Buton Reply
+        // Шапка сообщения: Имя отправителя + Время + Кнопка Ответить
         JPanel headerPanel = new JPanel(new BorderLayout(8, 0));
         headerPanel.setOpaque(false);
 
-        JLabel lblSender = new JLabel(message.getSender() + (isSelf ? " (Tu)" : ""));
+        JLabel lblSender = new JLabel(message.getSender() + (isSelf ? " (Вы)" : ""));
         lblSender.setFont(UITheme.FONT_BOLD);
         lblSender.setForeground(isSelf ? UITheme.ACCENT_LIGHT : UITheme.TEXT_PRIMARY);
 
@@ -121,8 +121,8 @@ public class MessageBubblePanel extends JPanel {
         leftHeader.add(lblTime);
         headerPanel.add(leftHeader, BorderLayout.WEST);
 
-        // Buton discret "↩ Răspunde"
-        JLabel btnReply = new JLabel("↩ Răspunde");
+        // Кнопка "↩ Ответить"
+        JLabel btnReply = new JLabel("↩ Ответить");
         btnReply.setFont(UITheme.FONT_TINY);
         btnReply.setForeground(UITheme.TEXT_MUTED);
         btnReply.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -147,7 +147,7 @@ public class MessageBubblePanel extends JPanel {
         headerPanel.add(btnReply, BorderLayout.EAST);
         bubbleBox.add(headerPanel);
 
-        // Dacă mesajul este un răspuns (Reply) la alt mesaj, afișăm citatul!
+        // Если данное сообщение является ответом (Reply), отображаем блок цитаты
         if (message.isReply()) {
             bubbleBox.add(Box.createVerticalStrut(6));
             bubbleBox.add(createQuoteBox());
@@ -155,7 +155,7 @@ public class MessageBubblePanel extends JPanel {
 
         bubbleBox.add(Box.createVerticalStrut(6));
 
-        // Conținut: Mesaj Text sau Card de Fișier
+        // Содержимое: Текстовое сообщение или Карточка переданного файла
         if (message.isFile()) {
             bubbleBox.add(createFileCard());
         } else {
@@ -175,7 +175,7 @@ public class MessageBubblePanel extends JPanel {
     }
 
     /**
-     * Creează un cerc de avatar cu inițiale colorat distinctiv.
+     * Создает круглую аватарку пользователя с инициалами.
      */
     private JPanel createAvatarPanel(String sender) {
         Color color = UITheme.getAvatarColor(sender);
@@ -212,7 +212,7 @@ public class MessageBubblePanel extends JPanel {
     }
 
     /**
-     * Creează căsuța de citare pentru mesajul original la care s-a răspuns.
+     * Создает блок цитаты с акцентной вертикальной полосой слева.
      */
     private JPanel createQuoteBox() {
         JPanel quote = new JPanel(new BorderLayout(8, 0)) {
@@ -222,7 +222,7 @@ public class MessageBubblePanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setColor(UITheme.QUOTE_BG);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                // Bară verticală de accent
+                // Акцентная полоса слева
                 g2.setColor(UITheme.ACCENT);
                 g2.fillRoundRect(0, 0, 3, getHeight(), 3, 3);
                 g2.dispose();
@@ -240,7 +240,7 @@ public class MessageBubblePanel extends JPanel {
     }
 
     /**
-     * Construiește cardul interactiv pentru transferul și descărcarea de fișiere.
+     * Создает интерактивную карточку для скачивания полученного файла.
      */
     private JPanel createFileCard() {
         JPanel card = new JPanel(new BorderLayout(10, 0)) {
@@ -258,12 +258,12 @@ public class MessageBubblePanel extends JPanel {
         card.setOpaque(false);
         card.setBorder(new EmptyBorder(8, 12, 8, 12));
 
-        // Iconiță fișier
+        // Иконка файла
         JLabel lblIcon = new JLabel("📁");
         lblIcon.setFont(new Font("SansSerif", Font.PLAIN, 28));
         card.add(lblIcon, BorderLayout.WEST);
 
-        // Info fișier (nume + mărime)
+        // Информация о файле (имя + размер)
         JPanel info = new JPanel(new GridLayout(2, 1, 0, 2));
         info.setOpaque(false);
 
@@ -279,12 +279,12 @@ public class MessageBubblePanel extends JPanel {
         info.add(lblSize);
         card.add(info, BorderLayout.CENTER);
 
-        // Butoane Salvare / Deschidere
+        // Кнопки Скачать и Открыть
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         actions.setOpaque(false);
 
-        JButton btnSave = UITheme.createPrimaryButton("⬇ Descarcă");
-        JButton btnOpen = UITheme.createSecondaryButton("📂 Deschide");
+        JButton btnSave = UITheme.createPrimaryButton("⬇ Скачать");
+        JButton btnOpen = UITheme.createSecondaryButton("📂 Открыть");
         btnOpen.setVisible(false);
 
         btnSave.addActionListener(e -> {
@@ -296,8 +296,8 @@ public class MessageBubblePanel extends JPanel {
                 try {
                     Desktop.getDesktop().open(savedFile);
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Nu s-a putut deschide fișierul: " + ex.getMessage(),
-                            "Eroare", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Не удалось открыть файл: " + ex.getMessage(),
+                            "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -311,7 +311,7 @@ public class MessageBubblePanel extends JPanel {
 
     private void saveFileAction(JButton btnSave, JButton btnOpen) {
         if (message.getFileData() == null || message.getFileData().length == 0) {
-            JOptionPane.showMessageDialog(this, "Fișierul nu conține date!", "Eroare", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Файл не содержит данных!", "Ошибка", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -324,16 +324,16 @@ public class MessageBubblePanel extends JPanel {
             try (FileOutputStream fos = new FileOutputStream(dest)) {
                 fos.write(message.getFileData());
                 savedFile = dest;
-                btnSave.setText("✅ Salvat");
+                btnSave.setText("✅ Сохранен");
                 btnSave.setEnabled(false);
                 btnOpen.setVisible(true);
                 revalidate();
                 repaint();
-                JOptionPane.showMessageDialog(this, "Fișier salvat cu succes în:\n" + dest.getAbsolutePath(),
-                        "Descărcare Reușită", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Файл успешно сохранен в:\n" + dest.getAbsolutePath(),
+                        "Загрузка завершена", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Eroare la salvare: " + ex.getMessage(),
-                        "Eroare", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Ошибка при сохранении: " + ex.getMessage(),
+                        "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

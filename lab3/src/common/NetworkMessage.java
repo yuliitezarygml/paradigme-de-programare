@@ -7,40 +7,46 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Pachetul principal de date transmis prin rețea între Client și Server.
- * Încorporează suport pentru:
- * - a. Mesagerie text normală
- * - b. Istoric mesaje
- * - c. Răspuns (Reply) la mesaj
- * - d. Transfer de fișiere (nume, dimensiune, date binare)
- * - e. Camere de chat (listă camere, cameră țintă)
+ * Основной пакет данных, передаваемый по сети между Клиентом и Сервером.
+ * Включает полную поддержку всех требований лабораторной работы №3:
+ * - a. Обычные текстовые сообщения
+ * - b. История сообщений комнаты
+ * - c. Ответ (Reply / цитирование) на конкретное сообщение
+ * - d. Передача и прием бинарных файлов (имя, размер, массив байтов)
+ * - e. Управление комнатами чата (список комнат, целевая комната)
  */
 public class NetworkMessage implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss");
 
+    // Уникальный идентификатор каждого сообщения (UUID)
     private final String id;
+    // Тип сообщения (см. перечисление MessageType)
     private final MessageType type;
+    // Имя отправителя
     private String sender;
+    // Целевая комната чата (например: #general)
     private String targetRoom;
+    // Текст сообщения
     private String text;
+    // Временная метка создания сообщения
     private final long timestamp;
 
-    // Câmpuri pentru Reply (Răspuns la un mesaj primit)
-    private String replyToId;
-    private String replyToAuthor;
-    private String replyToSnippet;
+    // Поля для реализации ответа на сообщение (Reply / цитирование)
+    private String replyToId;       // ID исходного сообщения, на которое отвечаем
+    private String replyToAuthor;   // Автор исходного сообщения
+    private String replyToSnippet;  // Фрагмент исходного текста для предварительного просмотра цитаты
 
-    // Câmpuri pentru File Transfer
-    private String fileName;
-    private long fileSize;
-    private byte[] fileData;
+    // Поля для передачи файлов
+    private String fileName;        // Имя передаваемого файла
+    private long fileSize;          // Размер файла в байтах
+    private byte[] fileData;        // Бинарное содержимое файла
 
-    // Câmpuri pentru sincronizare stare
-    private List<ChatRoom> rooms;
-    private List<String> roomUsers;
-    private List<NetworkMessage> history;
-    private String errorMessage;
+    // Поля для синхронизации состояния между сервером и клиентом
+    private List<ChatRoom> rooms;           // Список активных комнат
+    private List<String> roomUsers;         // Список пользователей в текущей комнате
+    private List<NetworkMessage> history;   // История сообщений комнаты
+    private String errorMessage;            // Текст ошибки (если type == ERROR)
 
     public NetworkMessage(MessageType type, String sender, String targetRoom) {
         this.id = UUID.randomUUID().toString();
@@ -50,14 +56,20 @@ public class NetworkMessage implements Serializable {
         this.timestamp = System.currentTimeMillis();
     }
 
-    // --- Metode Fabrică (Factory Methods) convenabile ---
+    // --- Фабричные методы (Factory Methods) для удобного создания сообщений ---
 
+    /**
+     * Создает стандартное текстовое сообщение.
+     */
     public static NetworkMessage createTextMessage(String sender, String targetRoom, String text) {
         NetworkMessage msg = new NetworkMessage(MessageType.CHAT_MESSAGE, sender, targetRoom);
         msg.setText(text);
         return msg;
     }
 
+    /**
+     * Создает сообщение-ответ (Reply) с прикрепленной цитатой исходного сообщения.
+     */
     public static NetworkMessage createReplyMessage(String sender, String targetRoom, String text,
                                                     String replyToId, String replyToAuthor, String replyToSnippet) {
         NetworkMessage msg = new NetworkMessage(MessageType.CHAT_MESSAGE, sender, targetRoom);
@@ -68,6 +80,9 @@ public class NetworkMessage implements Serializable {
         return msg;
     }
 
+    /**
+     * Создает сообщение для передачи файла (с возможностью цитирования).
+     */
     public static NetworkMessage createFileMessage(String sender, String targetRoom,
                                                    String fileName, long fileSize, byte[] fileData,
                                                    String replyToId, String replyToAuthor, String replyToSnippet) {
@@ -81,13 +96,16 @@ public class NetworkMessage implements Serializable {
         return msg;
     }
 
+    /**
+     * Создает системное уведомление для комнаты (вход/выход пользователей, создание комнаты и т.д.).
+     */
     public static NetworkMessage createNotification(String targetRoom, String text) {
-        NetworkMessage msg = new NetworkMessage(MessageType.SERVER_NOTIFICATION, "SISTEM", targetRoom);
+        NetworkMessage msg = new NetworkMessage(MessageType.SERVER_NOTIFICATION, "СИСТЕМА", targetRoom);
         msg.setText(text);
         return msg;
     }
 
-    // --- Getters & Setters ---
+    // --- Геттеры и сеттеры ---
 
     public String getId() {
         return id;
@@ -185,6 +203,9 @@ public class NetworkMessage implements Serializable {
         this.fileData = fileData;
     }
 
+    /**
+     * Возвращает форматированный размер файла (Б, КБ, МБ).
+     */
     public String getFormattedFileSize() {
         if (fileSize < 1024) return fileSize + " B";
         int exp = (int) (Math.log(fileSize) / Math.log(1024));
@@ -227,6 +248,6 @@ public class NetworkMessage implements Serializable {
     @Override
     public String toString() {
         return "[" + getFormattedTime() + "] (" + targetRoom + ") " + sender + ": " +
-                (isFile() ? "[Fișier: " + fileName + " (" + getFormattedFileSize() + ")]" : text);
+                (isFile() ? "[Файл: " + fileName + " (" + getFormattedFileSize() + ")]" : text);
     }
 }

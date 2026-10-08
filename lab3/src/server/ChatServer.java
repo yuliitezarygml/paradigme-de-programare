@@ -10,22 +10,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Nucleul serverului de chat multi-thread.
- * Gestionează conexiunile socket TCP, camerele de chat,
- * transmiterea mesajelor și fișierelor, precum și istoricul discuțiilor.
+ * Многопоточное ядро чат-сервера.
+ * Управляет входящими TCP socket соединениями, комнатами чата,
+ * маршрутизацией текстовых сообщений и файлов, а также персистентной историей переписки.
  */
 public class ChatServer {
 
+    // Порт по умолчанию для прослушивания входящих подключений
     private int port = 8888;
     private ServerSocket serverSocket;
     private volatile boolean running = false;
     private Thread acceptThread;
 
+    // Потокобезопасный список подключенных обработчиков клиентов
     private final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
+    // Карта зарегистрированных комнат чата (ключ: имя комнаты в нижнем регистре)
     private final Map<String, ChatRoom> rooms = new ConcurrentHashMap<>();
+    // История сообщений для каждой комнаты
     private final Map<String, List<NetworkMessage>> roomHistory = new ConcurrentHashMap<>();
 
+    // Слушатель событий сервера (для передачи данных в GUI)
     private ServerListener listener;
+    // Директория для хранения логов истории на диске
     private final File historyDir;
 
     public ChatServer() {
@@ -45,12 +51,12 @@ public class ChatServer {
     }
 
     /**
-     * Inițializează camerele de chat implicite.
+     * Инициализирует стандартные комнаты чата по умолчанию.
      */
     private void initDefaultRooms() {
-        addRoomInternal(new ChatRoom("#general", "Camera principală de discuție pentru toți membrii", "Server"));
-        addRoomInternal(new ChatRoom("#proiecte", "Discuții tehnice, partajare cod și fișiere de laborator", "Server"));
-        addRoomInternal(new ChatRoom("#random", "Socializare liberă, idei și pauză de cafea", "Server"));
+        addRoomInternal(new ChatRoom("#general", "Основная комната общения для всех участников", "Server"));
+        addRoomInternal(new ChatRoom("#proiecte", "Технические обсуждения, обмен кодом и файлами лабораторных", "Server"));
+        addRoomInternal(new ChatRoom("#random", "Свободное общение, идеи и отдых", "Server"));
     }
 
     private void addRoomInternal(ChatRoom room) {
@@ -60,7 +66,7 @@ public class ChatServer {
     }
 
     /**
-     * Pornește serverul pe portul specificat.
+     * Запускает сервер на указанном порту.
      */
     public synchronized boolean start(int port) {
         if (running) return true;
@@ -71,35 +77,36 @@ public class ChatServer {
             running = true;
 
             String localIp = detectLocalIP();
-            log("INFO", "Serverul a pornit cu succes pe portul " + port + " (IP local: " + localIp + ")");
+            log("INFO", "Сервер успешно запущен на порту " + port + " (Локальный IP: " + localIp + ")");
 
             if (listener != null) {
                 listener.onServerStarted(port, localIp);
             }
 
+            // Фоновый поток для приема новых входящих подключений клиентов
             acceptThread = new Thread(this::acceptClients, "ChatServer-AcceptThread");
             acceptThread.start();
             return true;
         } catch (IOException e) {
-            log("EROARE", "Eșec la pornirea serverului pe portul " + port + ": " + e.getMessage());
+            log("ОШИБКА", "Не удалось запустить сервер на порту " + port + ": " + e.getMessage());
             return false;
         }
     }
 
     /**
-     * Oprește serverul și deconectează toți clienții în siguranță.
+     * Корректно останавливает сервер и безопасно отключает всех активных клиентов.
      */
     public synchronized void stop() {
         if (!running) return;
         running = false;
 
-        log("INFO", "Oprire server în curs...");
+        log("INFO", "Идет остановка сервера...");
 
-        // Notificare și deconectare clienți
+        // Оповещение и принудительное отключение всех клиентов
         for (ClientHandler client : clients) {
             try {
-                NetworkMessage kickMsg = new NetworkMessage(MessageType.KICK, "SERVER", client.getCurrentRoom());
-                kickMsg.setText("Serverul a fost oprit de administrator.");
+                NetworkMessage kickMsg = new NetworkMessage(MessageType.KICK, "СЕРВЕР", client.getCurrentRoom());
+                kickMsg.setText("Сервер был остановлен администратором.");
                 client.sendMessage(kickMsg);
                 client.close();
             } catch (Exception ignored) {}
@@ -118,7 +125,7 @@ public class ChatServer {
 
         updateAllRoomCounts();
 
-        log("INFO", "Serverul a fost oprit complet.");
+        log("INFO", "Сервер полностью остановлен.");
         if (listener != null) {
             listener.onServerStopped();
         }
@@ -145,7 +152,7 @@ public class ChatServer {
     }
 
     /**
-     * Bucla de ascultare a noilor conexiuni de clienți.
+     * Цикл ожидания и принятия новых клиентских socket-соединений.
      */
     private void acceptClients() {
         while (running && !serverSocket.isClosed()) {
@@ -155,19 +162,19 @@ public class ChatServer {
                 new Thread(handler, "ClientHandler-" + socket.getRemoteSocketAddress()).start();
             } catch (IOException e) {
                 if (!running) break;
-                log("AVERTISMENT", "Eroare la acceptarea conexiunii socket: " + e.getMessage());
+                log("ПРЕДУПРЕЖДЕНИЕ", "Ошибка при принятии socket-соединения: " + e.getMessage());
             }
         }
     }
 
     /**
-     * Înregistrează un client nou după validarea numelui.
+     * Регистрирует нового клиента после проверки уникальности имени пользователя.
      */
     public synchronized boolean registerClient(ClientHandler handler, String requestedUsername) {
-        String cleanName = requestedUsername != null ? requestedUsername.trim() : "Anonim";
-        if (cleanName.isEmpty()) cleanName = "Anonim";
+        String cleanName = requestedUsername != null ? requestedUsername.trim() : "Аноним";
+        if (cleanName.isEmpty()) cleanName = "Аноним";
 
-        // Asigurăm unicitatea numelui
+        // Обеспечиваем уникальность никнейма (добавляем суффикс _1, _2 при коллизии)
         String finalName = cleanName;
         int counter = 1;
         while (isUsernameTaken(finalName)) {
@@ -180,20 +187,20 @@ public class ChatServer {
 
         updateAllRoomCounts();
 
-        log("INFO", "Client nou conectat: " + finalName + " de la " + handler.getSocket().getRemoteSocketAddress());
+        log("INFO", "Подключен новый клиент: " + finalName + " с адреса " + handler.getSocket().getRemoteSocketAddress());
 
-        // Trimitem confirmarea de conectare cu starea curentă
-        NetworkMessage ack = new NetworkMessage(MessageType.CONNECT_ACK, "SERVER", "#general");
+        // Отправляем клиенту подтверждение подключения с начальным состоянием
+        NetworkMessage ack = new NetworkMessage(MessageType.CONNECT_ACK, "СЕРВЕР", "#general");
         ack.setText(finalName);
         ack.setRooms(getRoomsList());
         ack.setRoomUsers(getUsersInRoom("#general"));
         ack.setHistory(getRecentHistory("#general", 50));
         handler.sendMessage(ack);
 
-        // Notificare către toți membrii camerei #general
-        broadcastToRoom("#general", NetworkMessage.createNotification("#general", "👋 " + finalName + " s-a alăturat chat-ului!"), null);
+        // Системное уведомление всем участникам комнаты #general
+        broadcastToRoom("#general", NetworkMessage.createNotification("#general", "👋 " + finalName + " присоединился к чату!"), null);
 
-        // Notificare actualizare listă camere către toți clienții
+        // Рассылаем обновленный список комнат и пользователей
         broadcastRoomList();
         broadcastUserList("#general");
 
@@ -205,7 +212,7 @@ public class ChatServer {
     }
 
     /**
-     * Deconectează un client și curăță resursele asociate.
+     * Отключает клиента и очищает связанные с ним ресурсы.
      */
     public synchronized void unregisterClient(ClientHandler handler) {
         if (!clients.contains(handler)) return;
@@ -215,10 +222,10 @@ public class ChatServer {
         String room = handler.getCurrentRoom();
 
         updateAllRoomCounts();
-        log("INFO", "Client deconectat: " + username + " din camera " + room);
+        log("INFO", "Клиент отключился: " + username + " из комнаты " + room);
 
         if (room != null) {
-            broadcastToRoom(room, NetworkMessage.createNotification(room, "🚪 " + username + " a părăsit camera."), null);
+            broadcastToRoom(room, NetworkMessage.createNotification(room, "🚪 " + username + " покинул чат."), null);
             broadcastUserList(room);
         }
         broadcastRoomList();
@@ -229,50 +236,50 @@ public class ChatServer {
     }
 
     /**
-     * Comutarea unui client într-o altă cameră de chat.
+     * Переключение клиента в другую комнату чата.
      */
     public synchronized void switchClientRoom(ClientHandler handler, String targetRoomName) {
         if (targetRoomName == null) return;
         String normalizedTarget = targetRoomName.toLowerCase();
         if (!rooms.containsKey(normalizedTarget)) {
-            // Dacă nu există, o creăm automat
-            createRoom(targetRoomName, "Cameră creată de utilizator", handler.getUsername());
+            // Если комната не найдена, создаем ее автоматически
+            createRoom(targetRoomName, "Комната создана пользователем", handler.getUsername());
         }
 
         ChatRoom target = rooms.get(normalizedTarget);
         String oldRoom = handler.getCurrentRoom();
         if (oldRoom.equalsIgnoreCase(target.getName())) return;
 
-        // Ieșire din camera veche
-        broadcastToRoom(oldRoom, NetworkMessage.createNotification(oldRoom, "🏃 " + handler.getUsername() + " a trecut în " + target.getName()), handler);
+        // Уведомление в старую комнату о выходе пользователя
+        broadcastToRoom(oldRoom, NetworkMessage.createNotification(oldRoom, "🏃 " + handler.getUsername() + " перешел в " + target.getName()), handler);
 
-        // Setare cameră nouă
+        // Установка новой комнаты для клиента
         handler.setCurrentRoom(target.getName());
         updateAllRoomCounts();
 
-        // Trimitere istoric cameră nouă direct către client
-        NetworkMessage historyMsg = new NetworkMessage(MessageType.HISTORY_RESPONSE, "SERVER", target.getName());
+        // Отправка истории сообщений новой комнаты напрямую клиенту
+        NetworkMessage historyMsg = new NetworkMessage(MessageType.HISTORY_RESPONSE, "СЕРВЕР", target.getName());
         historyMsg.setRooms(getRoomsList());
         historyMsg.setRoomUsers(getUsersInRoom(target.getName()));
         historyMsg.setHistory(getRecentHistory(target.getName(), 50));
         handler.sendMessage(historyMsg);
 
-        // Notificare în noua cameră
-        broadcastToRoom(target.getName(), NetworkMessage.createNotification(target.getName(), "🎉 " + handler.getUsername() + " a intrat în cameră!"), handler);
+        // Приветственное системное уведомление в новой комнате
+        broadcastToRoom(target.getName(), NetworkMessage.createNotification(target.getName(), "🎉 " + handler.getUsername() + " вошел в комнату!"), handler);
 
-        // Actualizare liste
+        // Обновление списков для всех участников
         broadcastUserList(oldRoom);
         broadcastUserList(target.getName());
         broadcastRoomList();
 
-        log("INFO", handler.getUsername() + " a schimbat camera: " + oldRoom + " -> " + target.getName());
+        log("INFO", handler.getUsername() + " сменил комнату: " + oldRoom + " -> " + target.getName());
         if (listener != null) {
             listener.onClientRoomChanged(handler.getInfo(), oldRoom, target.getName());
         }
     }
 
     /**
-     * Crearea unei noi camere de chat.
+     * Создание новой комнаты чата.
      */
     public synchronized boolean createRoom(String roomName, String description, String createdBy) {
         if (roomName == null || roomName.trim().isEmpty()) return false;
@@ -288,7 +295,7 @@ public class ChatServer {
         addRoomInternal(newRoom);
         updateAllRoomCounts();
 
-        log("INFO", "Cameră creată: " + cleanName + " de către " + createdBy);
+        log("INFO", "Комната создана: " + cleanName + " пользователем " + createdBy);
         broadcastRoomList();
 
         if (listener != null) {
@@ -298,20 +305,20 @@ public class ChatServer {
     }
 
     /**
-     * Ștergerea unei camere de chat (cu excepția camerei implicite #general).
+     * Удаление комнаты чата (удаление базовой комнаты #general запрещено).
      */
     public synchronized boolean deleteRoom(String roomName) {
         if (roomName == null) return false;
         String key = roomName.toLowerCase();
         if (key.equals("#general")) {
-            log("AVERTISMENT", "Camera #general este permanentă și nu poate fi ștearsă!");
+            log("ПРЕДУПРЕЖДЕНИЕ", "Главная комната #general является постоянной и не может быть удалена!");
             return false;
         }
 
         ChatRoom removed = rooms.remove(key);
         if (removed == null) return false;
 
-        // Migrăm toți clienții din camera ștearsă în #general
+        // Автоматически и безопасно переносим всех участников удаленной комнаты в #general
         for (ClientHandler client : clients) {
             if (client.getCurrentRoom().equalsIgnoreCase(roomName)) {
                 switchClientRoom(client, "#general");
@@ -320,7 +327,7 @@ public class ChatServer {
 
         updateAllRoomCounts();
         broadcastRoomList();
-        log("INFO", "Camera " + roomName + " a fost ștearsă.");
+        log("INFO", "Комната " + roomName + " была удалена.");
 
         if (listener != null) {
             listener.onRoomDeleted(roomName);
@@ -329,17 +336,17 @@ public class ChatServer {
     }
 
     /**
-     * Procesează și distribuie un mesaj text de chat (inclusiv răspunsuri / reply).
+     * Обрабатывает и рассылает текстовое сообщение (включая сообщения-ответы / Reply).
      */
     public void processChatMessage(NetworkMessage message) {
         String roomKey = message.getTargetRoom().toLowerCase();
         recordMessage(roomKey, message);
 
-        // Distribuire către toți membrii camerei
+        // Рассылаем всем участникам комнаты
         broadcastToRoom(message.getTargetRoom(), message, null);
 
-        log("CHAT", "[" + message.getTargetRoom() + "] " + message.getSender() +
-                (message.isReply() ? " (Răspuns la @" + message.getReplyToAuthor() + ")" : "") +
+        log("ЧАТ", "[" + message.getTargetRoom() + "] " + message.getSender() +
+                (message.isReply() ? " (Ответ для @" + message.getReplyToAuthor() + ")" : "") +
                 ": " + message.getText());
 
         if (listener != null) {
@@ -348,17 +355,17 @@ public class ChatServer {
     }
 
     /**
-     * Procesează și distribuie un transfer de fișier.
+     * Обрабатывает и рассылает переданный файл.
      */
     public void processFileTransfer(NetworkMessage message) {
         String roomKey = message.getTargetRoom().toLowerCase();
         recordMessage(roomKey, message);
 
-        // Distribuire către toți membrii camerei
+        // Рассылаем файл всем участникам комнаты
         broadcastToRoom(message.getTargetRoom(), message, null);
 
-        log("FIȘIER", "[" + message.getTargetRoom() + "] " + message.getSender() +
-                " a trimis fișierul: " + message.getFileName() + " (" + message.getFormattedFileSize() + ")");
+        log("ФАЙЛ", "[" + message.getTargetRoom() + "] " + message.getSender() +
+                " отправил файл: " + message.getFileName() + " (" + message.getFormattedFileSize() + ")");
 
         if (listener != null) {
             listener.onFileTransferred(message);
@@ -366,7 +373,7 @@ public class ChatServer {
     }
 
     /**
-     * Înregistrează mesajul în istoric (memorie și disc).
+     * Сохраняет сообщение в оперативной памяти и записывает в файл журнала на диске.
      */
     private synchronized void recordMessage(String roomKey, NetworkMessage msg) {
         List<NetworkMessage> list = roomHistory.computeIfAbsent(roomKey, k -> new CopyOnWriteArrayList<>());
@@ -374,6 +381,9 @@ public class ChatServer {
         appendHistoryToDisk(roomKey, msg);
     }
 
+    /**
+     * Возвращает последние max сообщений из истории комнаты.
+     */
     public List<NetworkMessage> getRecentHistory(String roomName, int max) {
         if (roomName == null) return Collections.emptyList();
         List<NetworkMessage> full = roomHistory.get(roomName.toLowerCase());
@@ -383,6 +393,9 @@ public class ChatServer {
         return new ArrayList<>(full.subList(start, full.size()));
     }
 
+    /**
+     * Возвращает полную историю сообщений комнаты.
+     */
     public List<NetworkMessage> getAllRoomHistory(String roomName) {
         if (roomName == null) return Collections.emptyList();
         List<NetworkMessage> list = roomHistory.get(roomName.toLowerCase());
@@ -390,7 +403,7 @@ public class ChatServer {
     }
 
     /**
-     * Transmite un pachet către toți utilizatorii din camera specificată.
+     * Передает пакет всем клиентам, находящимся в указанной комнате.
      */
     public void broadcastToRoom(String roomName, NetworkMessage msg, ClientHandler except) {
         if (roomName == null) return;
@@ -402,10 +415,10 @@ public class ChatServer {
     }
 
     /**
-     * Notifică toți clienții cu lista actualizată a camerelor.
+     * Рассылает всем клиентам обновленный список комнат.
      */
     public void broadcastRoomList() {
-        NetworkMessage msg = new NetworkMessage(MessageType.ROOM_LIST, "SERVER", "");
+        NetworkMessage msg = new NetworkMessage(MessageType.ROOM_LIST, "СЕРВЕР", "");
         msg.setRooms(getRoomsList());
         for (ClientHandler client : clients) {
             client.sendMessage(msg);
@@ -413,12 +426,12 @@ public class ChatServer {
     }
 
     /**
-     * Notifică clienții dintr-o cameră cu privire la membrii online.
+     * Рассылает список активных участников для указанной комнаты.
      */
     public void broadcastUserList(String roomName) {
         if (roomName == null) return;
         List<String> users = getUsersInRoom(roomName);
-        NetworkMessage msg = new NetworkMessage(MessageType.USER_LIST, "SERVER", roomName);
+        NetworkMessage msg = new NetworkMessage(MessageType.USER_LIST, "СЕРВЕР", roomName);
         msg.setRoomUsers(users);
 
         for (ClientHandler client : clients) {
@@ -429,26 +442,26 @@ public class ChatServer {
     }
 
     /**
-     * Trimitere anunț de la administratorul serverului către toate camerele.
+     * Отправка глобального объявления администратора сервера во все комнаты одновременно.
      */
     public void broadcastServerAnnouncement(String text) {
         for (ChatRoom room : rooms.values()) {
-            NetworkMessage msg = NetworkMessage.createNotification(room.getName(), "📢 ANUNȚ SERVER: " + text);
+            NetworkMessage msg = NetworkMessage.createNotification(room.getName(), "📢 ОБЪЯВЛЕНИЕ СЕРВЕРА: " + text);
             processChatMessage(msg);
         }
     }
 
     /**
-     * Deconectează forțat un utilizator (Kick).
+     * Принудительное отключение пользователя администратором (Kick).
      */
     public synchronized boolean kickUser(String username, String reason) {
         for (ClientHandler client : clients) {
             if (client.getUsername().equalsIgnoreCase(username)) {
-                NetworkMessage kickMsg = new NetworkMessage(MessageType.KICK, "SERVER", client.getCurrentRoom());
-                kickMsg.setText(reason != null ? reason : "Ai fost deconectat de administrator.");
+                NetworkMessage kickMsg = new NetworkMessage(MessageType.KICK, "СЕРВЕР", client.getCurrentRoom());
+                kickMsg.setText(reason != null ? reason : "Вы были отключены администратором.");
                 client.sendMessage(kickMsg);
                 client.close();
-                log("AVERTISMENT", "Utilizatorul " + username + " a primit Kick: " + reason);
+                log("ПРЕДУПРЕЖДЕНИЕ", "Пользователь " + username + " был отключен (Kick): " + reason);
                 return true;
             }
         }
@@ -486,7 +499,7 @@ public class ChatServer {
     }
 
     /**
-     * Scrie mesajul în fișierul de istoric pe disc.
+     * Записывает сообщение в файл истории на диске в кодировке UTF-8.
      */
     private void appendHistoryToDisk(String roomKey, NetworkMessage msg) {
         try {
@@ -494,24 +507,22 @@ public class ChatServer {
             File file = new File(historyDir, "history_" + safeRoom + ".log");
             try (PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(file, true), StandardCharsets.UTF_8))) {
                 out.println("[" + msg.getFormattedTime() + "] " + msg.getSender() + ": " +
-                        (msg.isFile() ? "[FIȘIER: " + msg.getFileName() + " (" + msg.getFormattedFileSize() + ")]" : msg.getText()) +
-                        (msg.isReply() ? " (Răspuns la @" + msg.getReplyToAuthor() + ": \"" + msg.getReplyToSnippet() + "\")" : ""));
+                        (msg.isFile() ? "[ФАЙЛ: " + msg.getFileName() + " (" + msg.getFormattedFileSize() + ")]" : msg.getText()) +
+                        (msg.isReply() ? " (Ответ на @" + msg.getReplyToAuthor() + ": \"" + msg.getReplyToSnippet() + "\")" : ""));
             }
         } catch (Exception e) {
-            // Ignorăm erorile de salvare pe disc pentru a nu bloca mesageria
+            // Ошибки записи логов не должны блокировать отправку сообщений в сети
         }
     }
 
     /**
-     * Încarcă mesaje vechi din fișierul de log dacă există.
+     * Чтение истории сообщений из файла при старте, если он существует.
      */
     private void loadHistoryFromDisk(String roomName) {
         try {
             String safeRoom = roomName.replace("#", "").replaceAll("[^a-zA-Z0-9_-]", "_");
             File file = new File(historyDir, "history_" + safeRoom + ".log");
             if (!file.exists()) return;
-
-            // Istoricul textual persistat pe disc este disponibil la solicitare
         } catch (Exception ignored) {}
     }
 
@@ -524,7 +535,7 @@ public class ChatServer {
     }
 
     /**
-     * Detectează adresa IP a mașinii în rețeaua locală (LAN).
+     * Автоматически определяет реальный локальный IP-адрес машины в сети LAN/Wi-Fi.
      */
     public static String detectLocalIP() {
         try {

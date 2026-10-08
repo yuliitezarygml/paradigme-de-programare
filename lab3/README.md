@@ -1,56 +1,56 @@
-# 💬 Laboratorul 3: Rețeaua locală (Sistem de Chat & Transfer Fișiere pe Java)
+# 💬 Лабораторная работа №3: Локальная сеть (Чат-система и передача файлов на Java)
 
-> **Curs:** Paradigme de programare (*Paradigme de programare*)  
-> **Tema:** Rețeaua locală — Transmiterea mesajelor, istoric, reply, transfer de fișiere și chat-room-uri  
-> **Punctaj conform cerințelor:** 10 / 10 puncte  
-> **Arhitectură:** Aplicație separată de **Server** cu panou de control GUI și aplicație separată de **Client** cu interfață modernă Dark/Slate.
-
----
-
-## 📑 Cuprins
-
-1. [Pornire Rapidă (Quick Start)](#1-pornire-rapidă-quick-start)
-2. [Arhitectura Aplicației și Structura Proiectului](#2-arhitectura-aplicației-și-structura-proiectului)
-3. [Cum sunt îndeplinite toate cerințele din temă (10 / 10)](#3-cum-sunt-îndeplinite-toate-cerințele-din-temă)
-   - [a. Transmiterea și recepționarea mesajelor în rețea (nota 5)](#a-transmiterea-și-recepționarea-mesajelor-în-rețea-cerința-minimă-nota-5)
-   - [b. Afișarea istoriei mesajelor primite (1 punct)](#b-afișarea-istoriei-mesajelor-primite-1-punct)
-   - [c. Posibilitatea de a răspunde la mesajul recepționat (Reply) (1 punct)](#c-posibilitatea-de-a-răspunde-la-mesajul-recepționat-reply-1-punct)
-   - [d. Transmiterea și recepționarea fișierelor (2 puncte)](#d-transmiterea-și-recepționarea-fișierelor-2-puncte)
-   - [e. Crearea chat-room-urilor (1 punct)](#e-crearea-chat-room-urilor-1-punct)
-4. [Panoul de Administrare al Serverului](#4-panoul-de-administrare-al-serverului-servergui)
-5. [Rularea în Rețea între mai multe Calculatoare (LAN / Wi-Fi)](#5-rularea-în-rețea-între-mai-multe-calculatoare-lan--wi-fi)
-6. [Testare Automată a Funcționalităților](#6-testare-automată-a-funcționalităților)
-7. [Întrebări Frecvente și Răspunsuri la Susținere (Шпаргалка)](#7-întrebări-frecvente-și-răspunsuri-la-susținere)
+> **Курс:** Парадигмы программирования (*Paradigme de programare*)  
+> **Тема:** Локальная сеть — Передача сообщений, история, цитирование (Reply), передача файлов и комнаты чата (*Rețeaua locală*)  
+> **Оценка по методичке:** 10 / 10 баллов  
+> **Архитектура:** Отдельное приложение **Сервера** с панелью управления (GUI) и отдельное приложение **Клиента** с современным интерфейсом в стиле Discord/Slack/Telegram.
 
 ---
 
-## 1. 🚀 Pornire Rapidă (Quick Start)
+## 📑 Содержание
 
-Toate scripturile au detectare automată a versiunii OpenJDK pe macOS (Apple Silicon și Intel):
+1. [Быстрый запуск (Quick Start)](#1-быстрый-запуск-quick-start)
+2. [Архитектура приложения и структура проекта](#2-архитектура-приложения-и-структура-проекта)
+3. [Реализация всех требований методички (10 / 10 баллов)](#3-реализация-всех-требований-методички-10--10-баллов)
+   - [Пункт a: Передача и прием сообщений в сети (минимум на 5 баллов)](#пункт-a-передача-и-прием-сообщений-в-сети-минимальное-требование-на-5-баллов)
+   - [Пункт b: Отображение истории полученных сообщений (+1 балл)](#пункт-b-отображение-истории-полученных-сообщений-1-балл)
+   - [Пункт c: Возможность ответа на полученное сообщение (Reply) (+1 балл)](#пункт-c-возможность-ответа-на-полученное-сообщение-reply-1-балл)
+   - [Пункт d: Передача и прием файлов (+2 балла)](#пункт-d-передача-и-прием-файлов-2-балла)
+   - [Пункт e: Создание комнат чата (Chat-room) (+1 балл)](#пункт-e-создание-комнат-чата-chat-room-1-балл)
+4. [Панель администратора Сервера (`ServerGUI`)](#4-панель-администратора-сервера-servergui)
+5. [Запуск в локальной сети между несколькими компьютерами (LAN / Wi-Fi)](#5-запуск-в-локальной-сети-между-несколькими-компьютерами-lan--wi-fi)
+6. [Автоматическое тестирование функционала](#6-автоматическое-тестирование-функционала)
+7. [Шпаргалка к защите перед преподавателем (Вопросы и Ответы)](#7-шпаргалка-к-защите-перед-преподавателем-вопросы-и-ответы)
 
-### Varianta A: Lansare Server
-Deschideți un terminal și rulați:
+---
+
+## 1. 🚀 Быстрый запуск (Quick Start)
+
+Все скрипты автоматически определяют пути к OpenJDK на macOS (Apple Silicon и Intel):
+
+### Вариант A: Запуск Сервера
+Откройте терминал и выполните:
 ```bash
 cd lab3
 ./run_server.sh
 ```
-*Se deschide panoul de control al Serverului. Apăsați butonul verde **„▶ Pornire Server”**.*
+*Откроется панель управления Сервером. Нажмите зеленую кнопку **«▶ Запустить Сервер»**.*
 
-### Varianta B: Lansare Client
-Deschideți un alt terminal și rulați:
+### Вариант B: Запуск Клиента
+Откройте другой терминал и выполните:
 ```bash
 cd lab3
 ./run_client.sh
 ```
-*Se deschide fereastra de chat a utilizatorului. Apăsați **„Conectare”** (implicit pe `127.0.0.1:8888`). Puteți deschide oricâți clienți doriți în paralel!*
+*Откроется окно чата. Нажмите кнопку **«Подключиться»** (по умолчанию `127.0.0.1:8888`). Можно запускать сколько угодно клиентов одновременно!*
 
-### Varianta C: Lansare Demo Complet (1 Server + 2 Clienți instant)
+### Вариант C: Запуск Демо (1 Сервер + 2 Клиента в 1 команду)
 ```bash
 cd lab3
 ./run.sh demo
 ```
 
-### Varianta D: Meniu Interactiv
+### Вариант D: Интерактивное меню
 ```bash
 cd lab3
 ./run.sh
@@ -58,203 +58,199 @@ cd lab3
 
 ---
 
-## 2. 📂 Arhitectura Aplicației și Structura Proiectului
+## 2. 📂 Архитектура приложения и структура проекта
 
-Proiectul este organizat curat conform principiilor OOP (Object-Oriented Programming), cu separare strictă între **protocolul comun de rețea**, **server** și **client**:
+Проект спроектирован по канонам объектно-ориентированного программирования (ООП), с четким разделением на **общий сетевой протокол**, **серверную часть** и **клиентскую часть**:
 
 ```
 lab3/
-├── README.md                 # Documentația completă a proiectului
-├── run.sh                    # Meniu interactiv central (server / client / demo / test)
-├── run_server.sh             # Script dedicat pentru compilare și pornire Server
-├── run_client.sh             # Script dedicat pentru compilare și pornire Client
-├── bin/                      # Fișierele de bytecode Java (.class)
-├── downloads/                # Folder implicit pentru fișierele descărcate
-├── history/                  # Stocare persistentă a istoricului camerelor pe disc (.log)
+├── README.md                 # Данная подробная документация
+├── run.sh                    # Центральный интерактивный скрипт запуска и тестов
+├── run_server.sh             # Скрипт сборки и запуска Сервера
+├── run_client.sh             # Скрипт сборки и запуска Клиента
+├── bin/                      # Скомпилированные байт-код файлы Java (.class)
+├── downloads/                # Каталог по умолчанию для скачанных файлов
+├── history/                  # Хранилище истории сообщений на диске (.log)
 └── src/
-    ├── ServerMain.java       # Punctul de intrare pentru Server
-    ├── ClientMain.java       # Punctul de intrare pentru Client
-    ├── TestNetworkChat.java  # Suită de teste automate pentru toate cerințele a-e
+    ├── ServerMain.java       # Точка входа для запуска Сервера
+    ├── ClientMain.java       # Точка входа для запуска Клиента
+    ├── TestNetworkChat.java  # Автоматический тест всех пунктов a-e
     │
-    ├── common/               # Modele comune de date și protocol de comunicație
-    │   ├── MessageType.java     # Enum cu tipurile de pachete (CHAT, FILE, REPLY, ROOM etc.)
-    │   ├── NetworkMessage.java  # Clasa pachet serializabil cu text, reply, date binare etc.
-    │   ├── ChatRoom.java        # Entitatea cameră de chat (nume, descriere, membri activi)
-    │   ├── ClientInfo.java      # Metadate despre clientul conectat (IP, port, cameră)
-    │   └── UITheme.java         # Paletă modernă Dark/Slate, antialiasing, butoane rotunjite
+    ├── common/               # Общие модели данных и сетевой протокол
+    │   ├── MessageType.java     # Перечисление типов сетевых пакетов (CHAT, FILE, REPLY и др.)
+    │   ├── NetworkMessage.java  # Класс сетевого пакета (текст, ответ, файл, комнаты)
+    │   ├── ChatRoom.java        # Модель комнаты чата (имя, описание, число участников)
+    │   ├── ClientInfo.java      # Модель метаданных подключенного клиента (IP, порт, комната)
+    │   └── UITheme.java         # Темная палитра Dark/Slate, сглаживание, круглые кнопки
     │
-    ├── server/               # Logica de rețea a Serverului
-    │   ├── ChatServer.java      # ServerSocket, gestionare clienți concurenți, rute, broadcast
-    │   ├── ClientHandler.java   # Fir separat (Thread) per client pentru recepție asincronă
-    │   ├── ServerListener.java  # Interfață de decuplare între server și GUI
-    │   └── ServerGUI.java       # Panoul vizual de administrare (start/stop, camere, log-uri)
+    ├── server/               # Серверная сетевая часть
+    │   ├── ChatServer.java      # ServerSocket, диспетчеризация клиентов, broadcast, история
+    │   ├── ClientHandler.java   # Выделенный поток (Thread) на каждого клиента
+    │   ├── ServerListener.java  # Интерфейс обратных вызовов для GUI сервера
+    │   └── ServerGUI.java       # Панель управления администратора (статистика, kick, логи)
     │
-    └── client/               # Logica de rețea a Clientului
-        ├── ChatClient.java         # Socket TCP, thread de recepție, apeluri API de rețea
-        ├── ClientListener.java     # Callback-uri pentru actualizarea interfeței
-        ├── MessageBubblePanel.java # Bule de chat moderne (avatar, citat reply, card fișier)
-        ├── HistoryDialog.java      # Fereastră de căutare, filtrare și export a istoricului
-        └── ClientGUI.java          # Interfața grafică completă de chat (sidebar, input, reply)
+    └── client/               # Клиентская часть
+        ├── ChatClient.java         # TCP сокет, поток чтения, методы отправки
+        ├── ClientListener.java     # Интерфейс слушателя сетевых событий клиента
+        ├── MessageBubblePanel.java # Современные пузыри чата (аватарки, цитаты, карточки файлов)
+        ├── HistoryDialog.java      # Окно поиска, фильтрации и экспорта истории сообщений
+        └── ClientGUI.java          # Графический интерфейс чата (боковое меню, ввод, цитирование)
 ```
 
 ---
 
-## 3. 🏆 Cum sunt îndeplinite toate cerințele din temă
+## 3. 🏆 Реализация всех требований методички (10 / 10 баллов)
 
-### a. Transmiterea și recepționarea mesajelor în rețea (cerința minimă, nota 5)
-* **Unde este implementat:** `server/ChatServer.java`, `server/ClientHandler.java`, `client/ChatClient.java`.
-* **Cum funcționează:**
-  1. Serverul ascultă pe un port TCP (implicit `8888`) folosind `ServerSocket`.
-  2. La conectarea unui client, se instanțiază un fir de execuție dedicat `ClientHandler` care citește continuu obiecte `NetworkMessage` printr-un `ObjectInputStream`.
-  3. Când un utilizator trimite un mesaj, clientul îl ambalează în `NetworkMessage` de tip `CHAT_MESSAGE`.
-  4. Serverul primește mesajul, îl adaugă în istoricul camerei și îl difuzează (*broadcast*) tuturor clienților conectați în acea cameră.
-  5. Clienții recepționează mesajul și afișează o bulă de chat stilizată pe firul grafic EDT (`SwingUtilities.invokeLater`).
-
----
-
-### b. Afișarea istoriei mesajelor primite (1 punct)
-* **Unde este implementat:** `client/HistoryDialog.java`, `server/ChatServer.java` (metodele `recordMessage`, `getRecentHistory`, `appendHistoryToDisk`).
-* **Cum funcționează:**
-  1. **La nivel de server:** Toate mesajele din fiecare cameră sunt păstrate într-un cache sincronizat în memorie (`CopyOnWriteArrayList`) și salvate automat pe disc în `lab3/history/history_<camera>.log`.
-  2. **La conectare sau schimbarea camerei:** Clientul primește automat ultimele mesaje din istoricul camerei și le afișează instant în zona de chat.
-  3. **Fereastră dedicată de căutare și export:** În antetul de chat există butonul **`📜 Istoric Mesaje`**:
-     * Afișează într-un tabel complet toate mesajele primite (ora, expeditor, tip, conținut).
-     * Oferă **filtru de căutare în timp real** după cuvinte cheie sau nume de expeditor.
-     * Permite **exportul complet al istoricului într-un fișier text (`.txt`)** prin butonul „📥 Exportă Istoric”.
-  4. **În Server:** Administratorul poate vedea în tab-ul „📜 Jurnal & Istoric Global” toate mesajele tranzitate și le poate exporta în fișier `.log`.
+### Пункт a: Передача и прием сообщений в сети (минимальное требование на 5 баллов)
+* **Где реализовано:** `server/ChatServer.java`, `server/ClientHandler.java`, `client/ChatClient.java`.
+* **Как работает:**
+  1. Сервер прослушивает входящие TCP-соединения через `ServerSocket` на указанном порту (по умолчанию `8888`).
+  2. При подключении клиента сервер создает отдельный поток `ClientHandler`, который непрерывно читает объекты `NetworkMessage` через `ObjectInputStream`.
+  3. Клиент упаковывает вводимый текст в пакет `NetworkMessage` с типом `CHAT_MESSAGE` и отправляет его через `ObjectOutputStream`.
+  4. Сервер принимает пакет, записывает его в историю целевой комнаты и транслирует (*broadcast*) всем подключенным участникам этой комнаты.
+  5. Клиенты принимают сообщение и мгновенно отрисовывают его в виде аккуратного пузыря чата на потоке Swing EDT (`SwingUtilities.invokeLater`).
 
 ---
 
-### c. Posibilitatea de a răspunde la mesajul recepționat (Reply) (1 punct)
-* **Unde este implementat:** `client/MessageBubblePanel.java`, `client/ClientGUI.java`, `common/NetworkMessage.java`.
-* **Cum funcționează:**
-  1. Pe fiecare bulă de mesaj există acțiunea **`↩ Răspunde`**.
-  2. La apăsare, deasupra câmpului de introducere a textului apare o **bară elegantă de citat (Reply Banner)**:
+### Пункт b: Отображение истории полученных сообщений (+1 балл)
+* **Где реализовано:** `client/HistoryDialog.java`, `server/ChatServer.java` (методы `recordMessage`, `getRecentHistory`, `appendHistoryToDisk`).
+* **Как работает:**
+  1. **На стороне сервера:** Все сообщения в каждой комнате сохраняются в синхронизированном списке в оперативной памяти (`CopyOnWriteArrayList`), а также автоматически записываются в текстовый файл на диске `history/history_<комната>.log`.
+  2. **При входе в комнату:** Клиент автоматически запрашивает и загружает последние сообщения из истории этой комнаты, восстанавливая контекст переписки.
+  3. **Специализированное окно истории:** В шапке клиента находится кнопка **`📜 История Сообщений`**:
+     * Открывает таблицу со всеми полученными сообщениями (время, автор, тип сообщения, текст/файл).
+     * Предоставляет **поисковый фильтр в реальном времени** по ключевым словам и автору.
+     * Позволяет **экспортировать всю историю сообщений в текстовый файл (`.txt`)** кнопкой «📥 Экспорт в файл».
+  4. **На стороне сервера:** Во вкладке «📜 Журнал & История Аудита» администратор видит сквозной аудит всех сообщений и может экспортировать их в файл `.log`.
+
+---
+
+### Пункт c: Возможность ответа на полученное сообщение (Reply) (+1 балл)
+* **Где реализовано:** `client/MessageBubblePanel.java`, `client/ClientGUI.java`, `common/NetworkMessage.java`.
+* **Как работает:**
+  1. В каждом пузыре сообщения доступна кнопка **`↩ Ответить`**.
+  2. При нажатии над полем ввода появляется **панель цитирования (Reply Banner)**:
      ```
      ┌────────────────────────────────────────────────────────────────────────┐
-     │ ▎ ↳ Răspuns către @Alex: "Salut, ai terminat laboratorul?"         [✕] │
+     │ ▎ ↳ Ответ пользователю @Alex: "Привет, ты сделал лабораторную?"    [✕] │
      └────────────────────────────────────────────────────────────────────────┘
-     [ 📎 Fișier ] [ Scrie mesajul tău aici...                     ] [ Trimite ✈ ]
+     [ 📎 Файл ] [ Введите ваш ответ здесь...                     ] [ Отправить ✈ ]
      ```
-  3. La trimitere, mesajul reține identificatorul mesajului părinte (`replyToId`), numele autorului citat (`replyToAuthor`) și un extras din text (`replyToSnippet`).
-  4. Când mesajul este afișat în chat de către toți participanții, bula conține o **casetă de citare dedicată**, cu margine colorată în stânga, evidențiind exact la ce mesaj s-a răspuns!
-  5. Utilizatorul poate oricând anula răspunsul apăsând butonul `✕`.
+  3. При отправке сообщение сохраняет ID родительского сообщения (`replyToId`), автора (`replyToAuthor`) и фрагмент цитируемого текста (`replyToSnippet`).
+  4. В чате у всех участников такое сообщение отображается со стильной встроенной цитатой, обрамленной акцентной цветной полосой слева.
+  5. Пользователь может в любой момент отменить цитирование кнопкой `✕`.
 
 ---
 
-### d. Transmiterea și recepționarea fișierelor (2 puncte)
-* **Unde este implementat:** `client/ClientGUI.java` (metoda `chooseAndSendFile`), `client/ChatClient.java` (metoda `sendFile`), `client/MessageBubblePanel.java` (metoda `createFileCard`).
-* **Cum funcționează:**
-  1. Clientul dispune de butonul **`📎 Fișier`**.
-  2. Se deschide un `JFileChooser` care permite selectarea oricărui tip de fișier de pe disc (imagini, documente PDF, arhive ZIP, fișiere sursă etc.).
-  3. Fișierul este citit binar (`Files.readAllBytes`) și împachetat într-un `NetworkMessage` de tip `FILE_TRANSFER`, având numele fișierului, dimensiunea în octeți și datele binare `byte[]`.
-  4. Serverul recepționează fișierul, contorizează statistica și îl transmite participanților din cameră.
-  5. În fereastra de chat a fiecărui participant apare un **Card de Fișier Interactiv**:
-     * Iconiță sugestivă de fișier (`📁`).
-     * Numele fișierului și dimensiunea formatată automat (`ex: 1.4 MB` sau `320.5 KB`).
-     * Buton **`⬇ Descarcă`**: deschide dialogul de salvare pe disc.
-     * După salvare, butonul se transformă în **`✅ Salvat`** și apare butonul **`📂 Deschide`** care deschide automat fișierul descărcat cu aplicația nativă din sistem (`Desktop.getDesktop().open(file)`).
+### Пункт d: Передача и прием файлов (+2 балла)
+* **Где реализовано:** `client/ClientGUI.java` (метод `chooseAndSendFile`), `client/ChatClient.java` (метод `sendFile`), `client/MessageBubblePanel.java` (метод `createFileCard`).
+* **Как работает:**
+  1. В строке ввода клиента предусмотрена кнопка **`📎 Файл`**.
+  2. Открывается системный диалог `JFileChooser`, позволяющий выбрать любой файл (изображения, документы PDF, архивы ZIP, код и т.д.).
+  3. Файл считывается в массив байтов (`Files.readAllBytes`) и упаковывается в `NetworkMessage` с типом `FILE_TRANSFER`, содержащий имя файла, точный размер и бинарные данные `byte[]`.
+  4. Сервер пересылает файл всем участникам комнаты.
+  5. В чате у участников отрисовывается **интерактивная карточка файла**:
+     * Иконка документа (`📁`).
+     * Имя файла и отформатированный размер (`например, 1.4 MB` или `256.0 KB`).
+     * Кнопка **`⬇ Скачать`**: открывает диалог сохранения файла в выбранную папку.
+     * После успешного скачивания кнопка меняется на **`✅ Сохранен`** и появляется кнопка **`📂 Открыть`**, запускающая файл в стандартном приложении операционной системы (`Desktop.getDesktop().open(file)`).
 
 ---
 
-### e. Crearea chat-room-urilor (1 punct)
-* **Unde este implementat:** `server/ChatServer.java`, `client/ClientGUI.java`, `common/ChatRoom.java`.
-* **Cum funcționează:**
-  1. **Camere implicite:** La pornire, serverul inițializează automat 3 camere:
-     * `#general` — camera principală de discuție pentru toți utilizatorii.
-     * `#proiecte` — discuții tehnice și laborator.
-     * `#random` — socializare liberă.
-  2. **Creare cameră de către Utilizator (din Client):**
-     * În bara laterală, lângă eticheta „CAMERE CHAT”, utilizatorul apasă butonul **`➕`**.
-     * Introduce numele camerei (de exemplu `echipa-alpha`) și o descriere opțională.
-     * Clientul transmite cererea către server (`CREATE_ROOM`).
-     * Serverul creează camera, o adaugă în registrul central și transmite lista actualizată către toți clienții conectați.
-     * Utilizatorul care a creat camera este comutat automat în ea!
-  3. **Creare și Ștergere de către Administrator (din Server GUI):**
-     * În panoul de control al serverului, tab-ul „📁 Camere de Chat” permite crearea oricărei camere noi sau ștergerea camerelor vechi.
-     * Dacă o cameră este ștearsă de admin, utilizatorii aflați în ea sunt migrați automat și în siguranță în camera `#general`.
-  4. **Izolare și Broadcast pe camere:** Mesajele și fișierele trimise într-o cameră ajung **doar la participanții din acea cameră**. Schimbarea camerei actualizează automat lista de membri online și încarcă istoricul corespunzător.
+### Пункт e: Создание комнат чата (Chat-room) (+1 балл)
+* **Где реализовано:** `server/ChatServer.java`, `client/ClientGUI.java`, `common/ChatRoom.java`.
+* **Как работает:**
+  1. **Комнаты по умолчанию:** При старте сервера создаются 3 готовые комнаты:
+     * `#general` — главная комната для всех участников.
+     * `#proiecte` — технические обсуждения и передача лабораторных работ.
+     * `#random` — свободный чат.
+  2. **Создание комнаты клиентом:**
+     * В боковом меню возле заголовка «КОМНАТЫ ЧАТА» пользователь нажимает кнопку **`➕`**.
+     * Вводит имя комнаты (например: `laborator3-grupa`) и описание.
+     * Сервер проверяет уникальность, регистрирует комнату и рассылает обновленный список всем клиентам.
+     * Создатель комнаты автоматически переключается в нее.
+  3. **Создание и удаление комнат администратором:**
+     * В панели сервера на вкладке «📁 Комнаты ЧАТА» администратор может создавать новые комнаты или удалять старые.
+     * При удалении комнаты все находившиеся в ней пользователи автоматически и безопасно переводятся в `#general`.
+  4. **Изоляция комнат:** Сообщения и файлы доставляются **только участникам текущей комнаты**. При переключении комнат обновляется список участников онлайн и загружается история переписки именно этой комнаты.
 
 ---
 
-## 4. 🖥️ Panoul de Administrare al Serverului (`ServerGUI`)
+## 4. 🖥️ Панель администратора Сервера (`ServerGUI`)
 
-Aplicația de server dispune de un GUI complet de monitorizare și administrare:
-
-* **Controale de Pornire/Oprire:** Butoane dedicate `▶ Pornire Server` (verde) și `⏹ Oprire` (roșu), selecție port (implicit `8888`).
-* **Detecție automată a IP-ului:** Afișează automat adresa IP locală a calculatorului (ex: `192.168.1.15`), utilă pentru conectarea colegilor din rețea.
-* **5 Carduri de Statistici Live:**
-  1. `Stare Server`: ACTIV / OPRIT.
-  2. `Camere Active`: numărul de camere create.
-  3. `Clienți Conectați`: numărul de utilizatori online în timp real.
-  4. `Mesaje Tranzitate`: numărul total de mesaje trimise prin server.
-  5. `Fișiere Trimise`: contor de transferuri de fișiere.
-* **Tab 1: Camere de Chat:** Tabel detaliat cu numele camerei, descrierea, cine a creat-o și numărul de membri activi. Butoane de creare și ștergere.
-* **Tab 2: Clienți Conectați:** Tabel cu numele de utilizator, adresa IP, portul de conexiune, camera în care se află și ora conectării. Permite funcția de **Kick (deconectare forțată cu motiv)**.
-* **Tab 3: Jurnal & Istoric Global:** Monitorizează toate pachetele, mesajele de chat, transferurile de fișiere și evenimentele de sistem. Include buton de **Export în fișier `.log`**.
-* **Bară de Anunțuri Globale (Broadcast):** Administratorul poate scrie un anunț care este distribuit instant în toate camerele de chat.
+Сервер имеет полноценную графическую панель управления:
+* **Управление запуском:** Кнопки `▶ Запустить Сервер` (зеленая) и `⏹ Остановить` (красная), выбор порта (по умолчанию `8888`), автоматическое определение **локального IP адреса в сети** (например, `192.168.1.50`).
+* **5 Информационных карточек:**
+  1. `Статус Сервера`: АКТИВЕН / ОСТАНОВЛЕН.
+  2. `Активных Комнат`: количество созданных комнат.
+  3. `Клиентов Онлайн`: число подключенных пользователей.
+  4. `Всего Сообщений`: счетчик отправленных сообщений.
+  5. `Передано Файлов`: счетчик переданных файлов.
+* **Вкладка 1 (Комнаты ЧАТА):** Таблица со списком комнат, описанием, автором и числом активных участников. Кнопки создания и удаления комнат.
+* **Вкладка 2 (Подключенные Клиенты):** Таблица с именами пользователей, их IP-адресами, портами, текущими комнатами и временем подключения. Функция **Kick (принудительное отключение с указанием причины)**.
+* **Вкладка 3 (Журнал & История Аудита):** Полный сквозной лог всех сетевых событий, сообщений и передачи файлов. Кнопка **Экспорт в файл `.log`**.
+* **Широковещательные объявления (Broadcast):** Отправка системных сообщений администратором во все комнаты одновременно.
 
 ---
 
-## 5. 🌐 Rularea în Rețea între mai multe Calculatoare (LAN / Wi-Fi)
+## 5. 🌐 Запуск в локальной сети между несколькими компьютерами (LAN / Wi-Fi)
 
-Pentru a demonstra funcționarea în rețea locală la facultate sau acasă:
-
-1. **Pe calculatorul care este Server:**
-   * Lansați serverul: `./run_server.sh`.
-   * Priviți eticheta din dreapta sus: de exemplu **`IP: 192.168.1.45`**.
-   * Asigurați-vă că serverul este pornit pe portul `8888`.
-2. **Pe calculatoarele Client (din aceeași rețea Wi-Fi sau LAN):**
-   * Lansați clientul: `./run_client.sh`.
-   * În bara de sus a clientului:
-     * La **Host:** introduceți IP-ul serverului (ex: `192.168.1.45`).
-     * La **Port:** introduceți `8888`.
-     * La **Nume:** introduceți numele vostru (ex: `Mihai`).
-     * Apăsați **Conectare**.
-3. **Rezultat:** Calculatoarele comunică în timp real: transmit mesaje, fac reply, trimit fișiere mari și navighează prin diferite camere de chat!
+Для демонстрации работы по сети:
+1. **На компьютере-сервере:**
+   * Запустите сервер: `./run_server.sh`.
+   * Посмотрите на бейдж в правом верхнем углу окна сервера: например, **`IP: 192.168.1.45`**.
+   * Убедитесь, что сервер запущен (кнопка «Запустить Сервер»).
+2. **На компьютерах-клиентах (в той же сети Wi-Fi или проводной сети):**
+   * Запустите клиент: `./run_client.sh`.
+   * В верхней панели клиента укажите:
+     * **Host:** IP-адрес сервера (например, `192.168.1.45`).
+     * **Порт:** `8888`.
+     * **Имя:** имя участника (например, `Иван`).
+     * Нажмите **Подключиться**.
+3. **Результат:** Компьютеры взаимодействуют в реальном времени: обмениваются сообщениями, цитируют друг друга, пересылают файлы и создают собственные комнаты!
 
 ---
 
-## 6. 🧪 Testare Automată a Funcționalităților
+## 6. 🧪 Автоматическое тестирование функционала
 
-În proiect este inclusă clasa `TestNetworkChat.java` care rulează un test complet, fără intervenție manuală, verificând automat fiecare cerință din barem:
+В проект включен класс `TestNetworkChat.java`, проверяющий программно без участия пользователя все пункты методички:
 
 ```bash
 cd lab3
 java -cp bin TestNetworkChat
 ```
 
-### Ieșirea testului:
+### Вывод теста:
 ```text
-🧪 Pornire teste automate pentru Laboratorul 3 (Chat Rețea)...
-[INFO] Serverul a pornit cu succes pe portul 9876 (IP local: 192.168.1.45)
-✅ [1/6] Serverul a pornit cu succes pe portul 9876
-✅ Client 2 (Bob) conectat!
-✅ Client 1 (Alice) conectat!
-✅ [2/6] Cerința a: Transmiterea și recepționarea mesajului a funcționat!
-✅ [3/6] Cerința c: Răspunsul (Reply) la mesaj a funcționat cu succes! (Citat: @Alice)
-✅ [4/6] Cerința e: Crearea camerei #proiect-nou a reușit și a fost notificată!
-✅ [5/6] Cerința d: Fișierul "test_file_lab3.txt" (54 B) a fost recepționat intact!
-✅ [6/6] Cerința b: Istoricul a fost interogat cu succes (2 mesaje înregistrate)!
+🧪 Запуск автоматических тестов для Лабораторной работы №3 (Сетевой чат)...
+[INFO] Сервер успешно запущен на порту 9876 (Локальный IP: 192.168.1.45)
+✅ [1/6] Сервер успешно запущен на порту 9876
+✅ Клиент 1 (Alice) успешно подключен!
+✅ Клиент 2 (Bob) успешно подключен!
+✅ [2/6] Требование a: Отправка и прием сообщений работают штатно!
+✅ [3/6] Требование c: Ответ (Reply) успешно отправлен и отображен! (Цитата автора: @Alice)
+✅ [4/6] Требование e: Создание комнаты #proiect-nou успешно выполнено и синхронизировано!
+✅ [5/6] Требование d: Файл "test_file_lab3.txt" (54 B) получен в целости и сохранности!
+✅ [6/6] Требование b: История переписки успешно запрошена (2 сообщений зафиксировано)!
 
-🎉 TOATE CELE 5 CERINȚE (a, b, c, d, e) AU FOST TESTATE ȘI VALIDATE CU SUCCES!
+🎉 ВСЕ 5 ТРЕБОВАНИЙ МЕТОДИЧКИ (a, b, c, d, e) УСПЕШНО ПРОТЕСТИРОВАНЫ И ПОДТВЕРЖДЕНЫ!
 ```
 
 ---
 
-## 7. 🎓 Întrebări Frecvente și Răspunsuri la Susținere (Шпаргалка)
+## 7. 🎓 Шпаргалка к защите перед преподавателем (Вопросы и Ответы)
 
-### 1. Cum funcționează comunicarea prin socket-uri în Java?
-* **Răspuns:** Serverul creează un `ServerSocket` care ascultă conexiuni TCP pe un port dat. Când un client apelează `new Socket(host, port)`, se stabilește o conexiune bi-direcțională bazată pe stream-uri (`InputStream` și `OutputStream`).
+### 1. Как организована работа по сети в Java?
+* **Ответ:** Сервер использует класс `ServerSocket`, который связывается с определенным TCP-портом и ожидает входящие запросы вызовом метода `accept()`. Клиент использует класс `Socket(host, port)`. После установки соединения формируется двунаправленный поток байтов через `InputStream` и `OutputStream`.
 
-### 2. De ce fiecare client are propriul fir de execuție (Thread)?
-* **Răspuns:** Citirea dintr-un socket prin `readObject()` este o operație blocantă (*blocking I/O*). Dacă serverul ar avea un singur thread, blocarea la citirea unui client ar îngheța comunicarea pentru toți ceilalți utilizatori. Prin alocarea unui `ClientHandler` per conexiune, toți clienții comunică concurent și independent.
+### 2. Зачем каждому клиенту нужен отдельный поток (Thread)?
+* **Ответ:** Метод `readObject()` блокирует поток выполнения до тех пор, пока из сокета не придут данные (*Blocking I/O*). Если бы сервер работал в одном потоке, ожидание сообщения от одного клиента заблокировало бы весь сервер для всех остальных. Выделение отдельного потока `ClientHandler` на каждого клиента обеспечивает конкурентную и независимую обработку.
 
-### 3. De ce este important apelul `out.reset()` la `ObjectOutputStream`?
-* **Răspuns:** `ObjectOutputStream` păstrează un tabel intern de referințe pentru obiectele deja serializate pentru optimizare. Dacă transmitem același obiect sau o listă modificată, stream-ul ar trimite doar referința din cache. Apelul `out.reset()` golește cache-ul de serializare, garantând transmiterea conținutului actualizat.
+### 3. Зачем вызывается `out.reset()` у `ObjectOutputStream`?
+* **Ответ:** Механизм сериализации Java `ObjectOutputStream` кэширует однажды отправленные объекты для оптимизации. Если отправить повторно измененный объект, без вызова `reset()` передастся только старая ссылка из кэша. Вызов `out.reset()` очищает внутреннюю таблицу ссылок потока и гарантирует передачу свежих данных.
 
-### 4. Cum este garantat faptul că interfața grafică Swing nu îngheață?
-* **Răspuns:** Toate operațiile de rețea (conectare, citire din socket, transfer de fișiere) sunt executate pe fire de execuție de fundal (*worker threads*). Când sosesc date noi, actualizarea componentelor vizuale este trimisă pe firul principal grafic al lui Swing (Event Dispatch Thread - EDT) prin `SwingUtilities.invokeLater()`.
+### 4. Почему интерфейс Swing не зависает при передаче больших данных?
+* **Ответ:** Все сетевые операции (подключение к сокету, чтение входящих пакетов, запись файлов) выполняются в фоновых потоках (*Worker Threads*). Обновление компонентов интерфейса передается в главный графический поток Swing Event Dispatch Thread (EDT) через вызов `SwingUtilities.invokeLater()`.
 
-### 5. Cum este implementat transferul de fișiere mari?
-* **Răspuns:** Fișierul este citit în octeți (`byte[]`), împachetat împreună cu metadatele sale (nume, dimensiune) într-un `NetworkMessage` de tip `FILE_TRANSFER`, și trimis prin rețea. La destinație, recipientul poate alege unde să salveze fișierul prin `JFileChooser`, fiind scris pe disc prin `FileOutputStream`.
+### 5. Как устроена передача бинарных файлов?
+* **Ответ:** Файл считывается с диска в массив байтов `byte[]`, упаковывается в сериализуемый класс `NetworkMessage` с метаданными (имя файла, размер в байтах) и типом `FILE_TRANSFER`. При получении получатель сохраняет этот массив байтов на свой диск через `FileOutputStream`.

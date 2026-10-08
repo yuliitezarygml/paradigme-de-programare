@@ -11,28 +11,28 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Test automat pentru validarea cerințelor de rețea (a, b, c, d, e):
- * a. Transmitere și recepție mesaje
- * b. Istoric mesaje
- * c. Răspuns (Reply) la mesaj
- * d. Transmitere și recepție fișiere
- * e. Creare și alăturare chat-rooms
+ * Автоматический интеграционный тест для проверки всех требований методички (a, b, c, d, e):
+ * a. Передача и прием текстовых сообщений в локальной сети
+ * b. История полученных сообщений
+ * c. Возможность ответа на конкретное сообщение (Reply / цитирование)
+ * d. Передача и прием бинарных файлов
+ * e. Создание комнат чата (chat-rooms) и переключение между ними
  */
 public class TestNetworkChat {
 
     public static void main(String[] args) throws Exception {
-        System.out.println("🧪 Pornire teste automate pentru Laboratorul 3 (Chat Rețea)...");
+        System.out.println("🧪 Запуск автоматических тестов для Лабораторной работы №3 (Сетевой чат)...");
 
         int testPort = 9876;
         ChatServer server = new ChatServer();
         boolean started = server.start(testPort);
         if (!started) {
-            System.err.println("❌ Nu s-a putut porni serverul de test!");
+            System.err.println("❌ Не удалось запустить тестовый сервер!");
             System.exit(1);
         }
-        System.out.println("✅ [1/6] Serverul a pornit cu succes pe portul " + testPort);
+        System.out.println("✅ [1/6] Сервер успешно запущен на порту " + testPort);
 
-        // Test Conectare Client 1 (Alice) și Client 2 (Bob)
+        // Тестирование подключения Клиента 1 (Алиса) и Клиента 2 (Боб)
         CountDownLatch connectLatch = new CountDownLatch(2);
         ChatClient alice = new ChatClient();
         ChatClient bob = new ChatClient();
@@ -40,7 +40,7 @@ public class TestNetworkChat {
         alice.setListener(new SimpleListener("Alice") {
             @Override
             public void onConnected(String username, List<ChatRoom> rooms, List<String> roomUsers, List<NetworkMessage> initialHistory) {
-                System.out.println("✅ Client 1 (" + username + ") conectat!");
+                System.out.println("✅ Клиент 1 (" + username + ") успешно подключен!");
                 connectLatch.countDown();
             }
         });
@@ -48,7 +48,7 @@ public class TestNetworkChat {
         bob.setListener(new SimpleListener("Bob") {
             @Override
             public void onConnected(String username, List<ChatRoom> rooms, List<String> roomUsers, List<NetworkMessage> initialHistory) {
-                System.out.println("✅ Client 2 (" + username + ") conectat!");
+                System.out.println("✅ Клиент 2 (" + username + ") успешно подключен!");
                 connectLatch.countDown();
             }
         });
@@ -57,13 +57,13 @@ public class TestNetworkChat {
         bob.connect("127.0.0.1", testPort, "Bob");
 
         if (!connectLatch.await(5, TimeUnit.SECONDS)) {
-            System.err.println("❌ Timeout la conectare!");
+            System.err.println("❌ Превышено время ожидания подключения клиентов!");
             System.exit(1);
         }
 
         Thread.sleep(300);
 
-        // Test Cerința a: Transmitere și recepționare mesaj
+        // Проверка Требования a: Отправка и прием текстового сообщения
         CountDownLatch msgLatch = new CountDownLatch(1);
         final NetworkMessage[] receivedByBob = new NetworkMessage[1];
 
@@ -77,15 +77,15 @@ public class TestNetworkChat {
             }
         });
 
-        alice.sendChatMessage("Salut Bob! Bine ai venit pe chat.", null, null, null);
+        alice.sendChatMessage("Привет, Боб! Добро пожаловать в сетевой чат.", null, null, null);
 
         if (!msgLatch.await(5, TimeUnit.SECONDS) || receivedByBob[0] == null) {
-            System.err.println("❌ Cerința a: Bob nu a primit mesajul de la Alice!");
+            System.err.println("❌ Требование a: Боб не получил сообщение от Алисы!");
             System.exit(1);
         }
-        System.out.println("✅ [2/6] Cerința a: Transmiterea și recepționarea mesajului a funcționat!");
+        System.out.println("✅ [2/6] Требование a: Отправка и прием сообщений работают штатно!");
 
-        // Test Cerința c: Răspuns (Reply) la mesaj
+        // Проверка Требования c: Ответ (Reply) на полученное сообщение с цитированием
         CountDownLatch replyLatch = new CountDownLatch(1);
         final NetworkMessage[] replyReceivedByAlice = new NetworkMessage[1];
 
@@ -99,19 +99,19 @@ public class TestNetworkChat {
             }
         });
 
-        bob.sendChatMessage("Salut Alice! Răspund la mesajul tău.",
+        bob.sendChatMessage("Привет, Алиса! Отвечаю на твое сообщение.",
                 receivedByBob[0].getId(),
                 receivedByBob[0].getSender(),
                 receivedByBob[0].getText());
 
         if (!replyLatch.await(5, TimeUnit.SECONDS) || replyReceivedByAlice[0] == null) {
-            System.err.println("❌ Cerința c: Răspunsul (Reply) nu a fost recepționat corect!");
+            System.err.println("❌ Требование c: Ответ (Reply) не был получен корректно!");
             System.exit(1);
         }
-        System.out.println("✅ [3/6] Cerința c: Răspunsul (Reply) la mesaj a funcționat cu succes! (Citat: @" +
+        System.out.println("✅ [3/6] Требование c: Ответ (Reply) успешно отправлен и отображен! (Цитата автора: @" +
                 replyReceivedByAlice[0].getReplyToAuthor() + ")");
 
-        // Test Cerința e: Creare chat-room și comutare
+        // Проверка Требования e: Создание комнаты чата и переключение
         CountDownLatch roomLatch = new CountDownLatch(1);
         bob.setListener(new SimpleListener("Bob") {
             @Override
@@ -124,19 +124,19 @@ public class TestNetworkChat {
             }
         });
 
-        alice.createRoom("#proiect-nou", "Camera de lucru proiect");
+        alice.createRoom("#proiect-nou", "Рабочая комната для проекта");
 
         if (!roomLatch.await(5, TimeUnit.SECONDS)) {
-            System.err.println("❌ Cerința e: Crearea camerei nu a fost propagată la Bob!");
+            System.err.println("❌ Требование e: Создание комнаты не было передано Бобу!");
             System.exit(1);
         }
-        System.out.println("✅ [4/6] Cerința e: Crearea camerei #proiect-nou a reușit și a fost notificată!");
+        System.out.println("✅ [4/6] Требование e: Создание комнаты #proiect-nou успешно выполнено и синхронизировано!");
 
-        // Trecem ambii în noua cameră
+        // Переводим обоих участников в новую комнату
         bob.joinRoom("#proiect-nou");
         Thread.sleep(400);
 
-        // Test Cerința d: Transmitere și recepționare fișiere
+        // Проверка Требования d: Передача и прием файлов
         CountDownLatch fileLatch = new CountDownLatch(1);
         final NetworkMessage[] fileReceivedByBob = new NetworkMessage[1];
 
@@ -152,19 +152,19 @@ public class TestNetworkChat {
 
         File tempFile = File.createTempFile("test_file_lab3", ".txt");
         try (FileWriter fw = new FileWriter(tempFile)) {
-            fw.write("Continut fisier de test transmis prin socket-uri Java.");
+            fw.write("Тестовое содержимое бинарного файла, переданного через сокеты Java.");
         }
 
         alice.sendFile(tempFile, null, null, null);
 
         if (!fileLatch.await(5, TimeUnit.SECONDS) || fileReceivedByBob[0] == null) {
-            System.err.println("❌ Cerința d: Bob nu a primit fișierul transmis de Alice!");
+            System.err.println("❌ Требование d: Боб не получил файл, отправленный Алисой!");
             System.exit(1);
         }
-        System.out.println("✅ [5/6] Cerința d: Fișierul \"" + fileReceivedByBob[0].getFileName() +
-                "\" (" + fileReceivedByBob[0].getFormattedFileSize() + ") a fost recepționat intact!");
+        System.out.println("✅ [5/6] Требование d: Файл \"" + fileReceivedByBob[0].getFileName() +
+                "\" (" + fileReceivedByBob[0].getFormattedFileSize() + ") получен в целости и сохранности!");
 
-        // Test Cerința b: Istoric mesaje
+        // Проверка Требования b: История сообщений
         CountDownLatch histLatch = new CountDownLatch(1);
         final List<NetworkMessage>[] histHolder = new List[1];
 
@@ -178,18 +178,18 @@ public class TestNetworkChat {
 
         bob.requestHistory("#general");
         if (!histLatch.await(5, TimeUnit.SECONDS) || histHolder[0] == null || histHolder[0].isEmpty()) {
-            System.err.println("❌ Cerința b: Istoricul camerei #general nu a fost returnat!");
+            System.err.println("❌ Требование b: История для комнаты #general не была возвращена!");
             System.exit(1);
         }
-        System.out.println("✅ [6/6] Cerința b: Istoricul a fost interogat cu succes (" + histHolder[0].size() + " mesaje înregistrate)!");
+        System.out.println("✅ [6/6] Требование b: История переписки успешно запрошена (" + histHolder[0].size() + " сообщений зафиксировано)!");
 
-        // Cleanup
-        alice.disconnect("Test terminat");
-        bob.disconnect("Test terminat");
+        // Корректное завершение и освобождение ресурсов
+        alice.disconnect("Тест завершен");
+        bob.disconnect("Тест завершен");
         server.stop();
         tempFile.delete();
 
-        System.out.println("\n🎉 TOATE CELE 5 CERINȚE (a, b, c, d, e) AU FOST TESTATE ȘI VALIDATE CU SUCCES!");
+        System.out.println("\n🎉 ВСЕ 5 ТРЕБОВАНИЙ МЕТОДИЧКИ (a, b, c, d, e) УСПЕШНО ПРОТЕСТИРОВАНЫ И ПОДТВЕРЖДЕНЫ!");
         System.exit(0);
     }
 

@@ -7,19 +7,26 @@ import java.net.Socket;
 import java.net.SocketException;
 
 /**
- * Gestionează conexiunea socket dedicată pentru un client individual.
- * Rulează pe un fir de execuție separat pentru recepționarea asincronă a mesajelor.
+ * Обработчик индивидуального клиентского TCP socket-соединения.
+ * Выполняется в отдельном потоке (Thread) для неблокирующего асинхронного приема пакетов.
  */
 public class ClientHandler implements Runnable {
 
+    // Ссылка на центральный экземпляр сервера
     private final ChatServer server;
+    // Клиентский сокет
     private final Socket socket;
+    // Потоки ввода-вывода объектов Java Serialization
     private ObjectOutputStream out;
     private ObjectInputStream in;
 
-    private String username = "Anonim";
+    // Имя текущего пользователя
+    private String username = "Аноним";
+    // Текущая комната чата (по умолчанию #general)
     private String currentRoom = "#general";
+    // Флаг активного соединения
     private volatile boolean connected = true;
+    // Метаданные клиента
     private ClientInfo info;
 
     public ClientHandler(ChatServer server, Socket socket) {
@@ -30,12 +37,12 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
-            // Inițializăm fluxurile I/O (ObjectOutputStream înainte de ObjectInputStream conform specificației Java)
+            // Инициализация потоков ввода-вывода (ObjectOutputStream перед ObjectInputStream согласно спецификации Java)
             out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
             in = new ObjectInputStream(socket.getInputStream());
 
-            // Bucla principală de recepție pachete din rețea
+            // Основной цикл чтения входящих сетевых пакетов
             while (connected && !socket.isClosed()) {
                 Object obj = in.readObject();
                 if (!(obj instanceof NetworkMessage)) continue;
@@ -44,16 +51,16 @@ public class ClientHandler implements Runnable {
                 handleMessage(msg);
             }
         } catch (EOFException | SocketException e) {
-            // Clientul a închis conexiunea
+            // Клиент закрыл соединение или произошел разрыв связи
         } catch (Exception e) {
-            System.err.println("[ClientHandler] Eroare conexiune pentru " + username + ": " + e.getMessage());
+            System.err.println("[ClientHandler] Ошибка соединения для " + username + ": " + e.getMessage());
         } finally {
             close();
         }
     }
 
     /**
-     * Procesează pachetul primit în funcție de tipul său.
+     * Диспетчеризация и обработка принятого сетевого пакета по его типу.
      */
     private void handleMessage(NetworkMessage msg) {
         if (msg == null) return;
@@ -87,15 +94,15 @@ public class ClientHandler implements Runnable {
                 if (created) {
                     server.switchClientRoom(this, roomName);
                 } else {
-                    NetworkMessage err = new NetworkMessage(MessageType.ERROR, "SERVER", this.currentRoom);
-                    err.setErrorMessage("Camera " + roomName + " există deja sau numele este invalid!");
+                    NetworkMessage err = new NetworkMessage(MessageType.ERROR, "СЕРВЕР", this.currentRoom);
+                    err.setErrorMessage("Комната " + roomName + " уже существует или имя некорректно!");
                     sendMessage(err);
                 }
                 break;
 
             case HISTORY_REQUEST:
                 String targetRoom = msg.getTargetRoom() != null ? msg.getTargetRoom() : this.currentRoom;
-                NetworkMessage resp = new NetworkMessage(MessageType.HISTORY_RESPONSE, "SERVER", targetRoom);
+                NetworkMessage resp = new NetworkMessage(MessageType.HISTORY_RESPONSE, "СЕРВЕР", targetRoom);
                 resp.setHistory(server.getAllRoomHistory(targetRoom));
                 resp.setRoomUsers(server.getUsersInRoom(targetRoom));
                 resp.setRooms(server.getRoomsList());
@@ -112,14 +119,14 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Trimite un mesaj către client în mod sincronizat pentru a preveni coliziunile pe stream.
+     * Потокобезопасная отправка сообщения клиенту через сокет.
      */
     public synchronized boolean sendMessage(NetworkMessage msg) {
         if (!connected || out == null || socket.isClosed()) return false;
         try {
             out.writeObject(msg);
             out.flush();
-            out.reset(); // Curăță cache-ul ObjectOutputStream pentru a permite modificări de stare
+            out.reset(); // Сброс кэша ObjectOutputStream для гарантированной отправки обновленных объектов
             return true;
         } catch (IOException e) {
             close();
@@ -128,7 +135,7 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Închide conexiunea cu clientul.
+     * Закрывает соединение, сокет и потоки ввода-вывода.
      */
     public synchronized void close() {
         if (!connected) return;
@@ -171,7 +178,7 @@ public class ClientHandler implements Runnable {
 
     private void updateInfo() {
         String ip = socket != null && socket.getInetAddress() != null ?
-                socket.getInetAddress().getHostAddress() : "Necunoscut";
+                socket.getInetAddress().getHostAddress() : "Неизвестно";
         int port = socket != null ? socket.getPort() : 0;
         this.info = new ClientInfo(username, ip, port, currentRoom);
     }

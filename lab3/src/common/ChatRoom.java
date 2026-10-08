@@ -4,16 +4,21 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Reprezintă o cameră de discuție (Chat Room).
- * Suportă transmiterea mesajelor către mai multe calculatoare simultan.
+ * Класс, представляющий комнату для общения (Chat Room).
+ * Обеспечивает возможность отправки сообщений сразу на несколько компьютеров (широковещание в комнате).
  */
 public class ChatRoom implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    // Название комнаты (всегда начинается с символа #)
     private final String name;
+    // Описание / тема обсуждения в комнате
     private final String description;
+    // Временная метка создания комнаты (в миллисекундах)
     private final long createdAt;
+    // Имя создателя комнаты (пользователь или System/Admin)
     private final String createdBy;
+    // Текущее количество активных пользователей в комнате
     private int userCount;
 
     public ChatRoom(String name, String description, String createdBy) {

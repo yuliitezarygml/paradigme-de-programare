@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# Lansare: Server Chat Rețea Locală (Laboratorul 3)
+# Скрипт сборки и запуска: Сервер локального чата (Лабораторная работа №3)
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# 1. Configurare cale către OpenJDK pe macOS (Apple Silicon / Intel)
+# 1. Настройка путей к OpenJDK на macOS (Apple Silicon и Intel)
 if [ -d "/opt/homebrew/opt/openjdk/bin" ]; then
     export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
     export JAVA_HOME="/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
@@ -27,14 +27,14 @@ fi
 
 mkdir -p bin downloads history
 
-echo "⚙️  Compilare surse Java..."
+echo "⚙️  Компиляция исходных файлов Java..."
 javac -encoding UTF-8 -d bin src/common/*.java src/server/*.java src/client/*.java src/*.java
 
 if [ $? -ne 0 ]; then
-    echo "❌ Eroare la compilare!"
+    echo "❌ Ошибка при компиляции!"
     exit 1
 fi
 
-echo "✅ Compilare reușită!"
-echo "🚀 Pornire Server Chat Local..."
+echo "✅ Компиляция успешно завершена!"
+echo "🚀 Запуск Сервера локального чата..."
 java -cp bin ServerMain

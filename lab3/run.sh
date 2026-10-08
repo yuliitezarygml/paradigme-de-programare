@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# Script Central de Lansare & Testare: Laborator 3 (Rețeaua locală)
+# Центральный скрипт сборки, запуска и тестирования: Лабораторная работа №3
+# Тема: Локальная сеть (Клиент - Сервер чат с комнатами и файлами)
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# 1. Configurare cale către OpenJDK pe macOS (Apple Silicon / Intel)
+# 1. Настройка путей к OpenJDK на macOS (Apple Silicon и Intel)
 if [ -d "/opt/homebrew/opt/openjdk/bin" ]; then
     export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
     export JAVA_HOME="/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home"
@@ -28,65 +29,65 @@ fi
 mkdir -p bin downloads history
 
 echo "=========================================================="
-echo "  💬 LABORATORUL 3: REȚEAUA LOCALĂ (CLIENT - SERVER CHAT)"
+echo "  💬 ЛАБОРАТОРНАЯ РАБОТА №3: ЛОКАЛЬНАЯ СЕТЬ (JAVA ЧАТ)"
 echo "=========================================================="
-echo "⚙️  Compilare proiect Java..."
+echo "⚙️  Компиляция проекта Java..."
 javac -encoding UTF-8 -d bin src/common/*.java src/server/*.java src/client/*.java src/*.java
 
 if [ $? -ne 0 ]; then
-    echo "❌ Eroare critică la compilare!"
+    echo "❌ Критическая ошибка при компиляции!"
     exit 1
 fi
-echo "✅ Compilare finalizată cu succes!"
+echo "✅ Компиляция успешно завершена!"
 
 MODE="$1"
 
 if [ -z "$MODE" ]; then
     echo ""
-    echo "Alege modul de rulare:"
-    echo "  1) Pornire Server (Panou de Administrare)"
-    echo "  2) Pornire Client Chat"
-    echo "  3) Pornire Server + 2 Clienți (Demo Complet Instant)"
-    echo "  4) Rulare Teste Automate (Validare Cerințe a-e)"
-    echo "  5) Ieșire"
+    echo "Выберите режим запуска:"
+    echo "  1) Запуск Сервера (Панель управления администратора)"
+    echo "  2) Запуск Клиента чата"
+    echo "  3) Запуск Демо (1 Сервер + 2 Клиента одновременно)"
+    echo "  4) Запуск Автоматических тестов (Проверка пунктов a-e)"
+    echo "  5) Выход"
     echo ""
-    read -p "Opțiunea ta (1-5): " CHOICE
+    read -p "Ваш выбор (1-5): " CHOICE
     case "$CHOICE" in
         1) MODE="server" ;;
         2) MODE="client" ;;
         3) MODE="demo" ;;
         4) MODE="test" ;;
-        *) echo "Ieșire."; exit 0 ;;
+        *) echo "Выход."; exit 0 ;;
     esac
 fi
 
 case "$MODE" in
     server)
-        echo "🚀 Lansare Server..."
+        echo "🚀 Запуск Сервера..."
         java -cp bin ServerMain
         ;;
     client)
-        echo "💬 Lansare Client..."
+        echo "💬 Запуск Клиента..."
         java -cp bin ClientMain
         ;;
     demo)
-        echo "⚡ Lansare Demo Complet (1 Server + 2 Clienți)..."
+        echo "⚡ Запуск полного Демо (1 Сервер + 2 Клиента)..."
         java -cp bin ServerMain &
         SERVER_PID=$!
         sleep 1.5
         java -cp bin ClientMain &
         sleep 0.8
         java -cp bin ClientMain &
-        echo "Aplicațiile rulează! Apasă Ctrl+C pentru a opri totul."
+        echo "Приложения запущены! Нажмите Ctrl+C для завершения работы."
         wait $SERVER_PID
         ;;
     test)
-        echo "🧪 Rulare teste automate..."
+        echo "🧪 Запуск автоматических тестов..."
         java -cp bin TestNetworkChat
         ;;
     *)
-        echo "Opțiune necunoscută: $MODE"
-        echo "Utilizare: ./run.sh [server|client|demo|test]"
+        echo "Неизвестный параметр: $MODE"
+        echo "Использование: ./run.sh [server|client|demo|test]"
         exit 1
         ;;
 esac

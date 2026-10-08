@@ -11,11 +11,8 @@ import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 
 /**
- * Clasa AppStyles gestionează încărcarea temei și a stilurilor vizuale
- * din fișierul extern "theme.properties".
- *
- * Utilizatorul poate edita fișierul theme.properties cu orice editor de text
- * pentru a schimba culorile, fonturile implicite sau dimensiunile!
+ * Цвета и шрифт из файла theme.properties.
+ * Меню «Vizualizare → Reîncarcă tema» вызывает loadTheme() ещё раз.
  */
 public class AppStyles {
 

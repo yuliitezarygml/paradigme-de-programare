@@ -3,16 +3,21 @@ package common;
 import java.io.Serializable;
 
 /**
- * Informații despre un client conectat la server.
- * Folosit pentru afișarea în dashboard-ul Serverului și monitorizarea conexiunilor.
+ * Информация о подключенном к серверу клиенте.
+ * Используется для отображения в панели администратора сервера и аудита активных сетевых соединений.
  */
 public class ClientInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    // Имя пользователя
     private final String username;
+    // IP-адрес клиента
     private final String ipAddress;
+    // Порт сокета клиента
     private final int port;
+    // Текущая комната, в которой находится клиент
     private String currentRoom;
+    // Время подключения (timestamp в миллисекундах)
     private final long connectedAt;
 
     public ClientInfo(String username, String ipAddress, int port, String currentRoom) {

@@ -1,68 +1,63 @@
 import java.io.File;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
-import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.MutableAttributeSet;
+import javax.swing.text.StyleConstants;
 
 /**
- * Clasa DocumentTab reprezintă o singură filă (tab) deschisă în redactor.
- * Conține componenta de editare JTextPane, referința la fișierul de pe disc
- * și starea curentă a modificărilor (isModified).
- *
- * Realizează Cerința e din programa de laborator:
- * "Lucrul cu mai multe fișiere în file noi aparte (new tabs)"
+ * Одна вкладка.
+ * Хранит текст (JTextPane), файл на диске и флаг «есть несохранённые правки».
  */
 public class DocumentTab {
 
-    private final JTextPane textPane;
+    private final JTextPane textPane = new JTextPane();
     private final JScrollPane scrollPane;
     private File currentFile;
     private String title;
-    private boolean isModified = false;
-    private boolean suppressModifiedEvents = false;
-
-    // Listener pentru a notifica fereastra principală la orice modificare
+    private boolean isModified;
+    private boolean suppressModifiedEvents;
     private Runnable onModifiedStateChanged;
 
     public DocumentTab(String initialTitle, File file) {
         this.title = initialTitle;
         this.currentFile = file;
-
-        this.textPane = new JTextPane();
-        AppStyles.applyToEditor(this.textPane);
-
-        this.scrollPane = new JScrollPane(this.textPane);
-        this.scrollPane.setBorder(null);
-
-        // Atașăm ascultător de evenimente pe conținutul documentului
+        AppStyles.applyToEditor(textPane);
+        // Стиль нового текста. Он записывается в символы и потом сохраняется в RTF.
+        MutableAttributeSet typing = textPane.getInputAttributes();
+        StyleConstants.setFontFamily(typing, AppStyles.defaultFontFamily);
+        StyleConstants.setFontSize(typing, AppStyles.defaultFontSize);
+        StyleConstants.setForeground(typing, AppStyles.editorForeground);
+        scrollPane = new JScrollPane(textPane);
+        scrollPane.setBorder(null);
         attachDocumentListener();
     }
 
     /**
-     * Ascultă modificările aduse textului și stilurilor pentru a marca
-     * documentul ca "modificat" (asterisc în titlu).
+     * Следит за правками текущего документа.
+     * После открытия файла документ заменяется, поэтому слушатель вешаем заново.
      */
     public void attachDocumentListener() {
         textPane.getStyledDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) {
-                notifyChange();
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                markModified();
             }
 
             @Override
-            public void removeUpdate(DocumentEvent e) {
-                notifyChange();
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                markModified();
             }
 
             @Override
-            public void changedUpdate(DocumentEvent e) {
-                // Modificare de atribute/stiluri
-                notifyChange();
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                markModified();
             }
         });
     }
 
-    private void notifyChange() {
+    /** Первая правка ставит звёздочку. При загрузке файла события глушим. */
+    private void markModified() {
         if (!suppressModifiedEvents && !isModified) {
             setModified(true);
         }
@@ -80,19 +75,15 @@ public class DocumentTab {
         return currentFile;
     }
 
-    public void setCurrentFile(File currentFile) {
-        this.currentFile = currentFile;
-        if (currentFile != null) {
-            this.title = currentFile.getName();
+    public void setCurrentFile(File file) {
+        this.currentFile = file;
+        if (file != null) {
+            this.title = file.getName();
         }
     }
 
     public String getTitle() {
         return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
     }
 
     public boolean isModified() {
@@ -114,13 +105,8 @@ public class DocumentTab {
         this.onModifiedStateChanged = callback;
     }
 
-    /**
-     * Titlul afișat pe fila din tab, cu asterisc dacă este modificat.
-     */
+    /** Имя на вкладке. Звёздочка значит «не сохранено». */
     public String getDisplayTitle() {
-        if (isModified) {
-            return title + " *";
-        }
-        return title;
+        return isModified ? title + " *" : title;
     }
 }
