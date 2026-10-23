@@ -275,6 +275,7 @@ class MessageView(ttk.Frame):
 
     def _rounded_rectangle(self, x1, y1, x2, y2, radius=12, **options):
         # Повторные точки оставляют прямые стороны и сглаживают только углы.
+        options.setdefault("outline", "")
         radius = min(radius, (x2 - x1) / 2, (y2 - y1) / 2)
         points = (
             x1 + radius, y1, x2 - radius, y1, x2, y1, x2, y1 + radius,

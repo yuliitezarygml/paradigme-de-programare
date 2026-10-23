@@ -41,7 +41,7 @@ def apply_theme(window):
     style.configure("Vertical.TScrollbar", background="#cbd5e1", troughcolor=SURFACE,
                     bordercolor=SURFACE, arrowcolor=MUTED, width=10)
 
-# Цвета клиента в стиле тёмного Telegram. Панель сервера остаётся светлой.
+# Общая тёмная тема клиента, сервера и окна запуска.
 CHAT_BACKGROUND = "#0e1621"
 CHAT_PANEL = "#17212d"
 CHAT_INPUT = "#202f3f"
@@ -74,4 +74,6 @@ def apply_chat_theme(window):
     style.map("Accent.TButton", background=[("disabled", "#21405a"), ("active", "#3ca4d7")],
               foreground=[("disabled", "#7592a9"), ("!disabled", "white")])
     style.configure("Vertical.TScrollbar", background="#2c4055", troughcolor=CHAT_BACKGROUND,
-                    bordercolor=CHAT_BACKGROUND, arrowcolor=CHAT_MUTED)
+                    bordercolor=CHAT_BACKGROUND, arrowcolor=CHAT_MUTED,
+                    lightcolor="#2c4055", darkcolor="#2c4055", gripcount=0)
+    style.map("Vertical.TScrollbar", background=[("active", "#42607b"), ("!active", "#2c4055")])

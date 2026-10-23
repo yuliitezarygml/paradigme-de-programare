@@ -39,12 +39,12 @@ class ChatApp(tk.Tk):
         self.has_more = False
         self.downloads = {}
         self.connection_fields = []
-        self.name = tk.StringVar(value=socket.gethostname().split(".")[0][:32])
-        self.host = tk.StringVar(value="127.0.0.1")
-        self.port = tk.StringVar(value=str(DEFAULT_PORT))
-        self.status = tk.StringVar(value="Запустите сервер и подключитесь по его IP.")
-        self.selection_text = tk.StringVar(value="Выберите сообщение для ответа")
-        self.reply_text = tk.StringVar()
+        self.name = tk.StringVar(self, value=socket.gethostname().split(".")[0][:32])
+        self.host = tk.StringVar(self, value="127.0.0.1")
+        self.port = tk.StringVar(self, value=str(DEFAULT_PORT))
+        self.status = tk.StringVar(self, value="Запустите сервер и подключитесь по его IP.")
+        self.selection_text = tk.StringVar(self, value="Выберите сообщение для ответа")
+        self.reply_text = tk.StringVar(self)
         self._build_window()
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(100, self._read_events)

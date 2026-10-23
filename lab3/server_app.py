@@ -34,12 +34,12 @@ class ServerApp(tk.Tk):
         self.server = None
         self.data_dir = data_dir
         self.events = queue.Queue()
-        self.host = tk.StringVar(value=host)
-        self.port = tk.StringVar(value=str(port))
-        self.status = tk.StringVar(value="Сервер остановлен.")
-        self.people = tk.StringVar(value="Участники: —")
-        self.room_name = tk.StringVar()
-        self.room_hint = tk.StringVar(value="Запустите сервер для управления комнатами.")
+        self.host = tk.StringVar(self, value=host)
+        self.port = tk.StringVar(self, value=str(port))
+        self.status = tk.StringVar(self, value="Сервер остановлен.")
+        self.people = tk.StringVar(self, value="Участники: —")
+        self.room_name = tk.StringVar(self)
+        self.room_hint = tk.StringVar(self, value="Запустите сервер для управления комнатами.")
         self.room_details = {}
         self.rooms_snapshot = None
         self.columnconfigure(0, weight=1)
