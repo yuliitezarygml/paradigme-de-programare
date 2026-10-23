@@ -4,6 +4,7 @@ import logging
 import base64
 import binascii
 import errno
+import queue
 import socket
 import threading
 import uuid
@@ -30,13 +31,33 @@ class ClientSession:
         self.connection = connection
         self.name = ""
         self.room = ""
-        self._send_lock = threading.Lock()
+        # Отдельная очередь: медленный клиент не задерживает остальных.
+        self._outgoing = queue.Queue(maxsize=100)
+        self._closed = threading.Event()
+        threading.Thread(target=self._send_loop, daemon=True).start()
 
     def send(self, packet):
-        with self._send_lock:
-            send_packet(self.connection, packet)
+        if self._closed.is_set():
+            raise ConnectionError("Клиент отключён.")
+        try:
+            self._outgoing.put_nowait(packet)
+        except queue.Full:
+            self.close()
+            raise ConnectionError("Клиент не успевает получать сообщения.") from None
+
+    def _send_loop(self):
+        while not self._closed.is_set():
+            try:
+                packet = self._outgoing.get(timeout=0.3)
+            except queue.Empty:
+                continue
+            try:
+                send_packet(self.connection, packet)
+            except (OSError, ValueError):
+                self.close()
 
     def close(self):
+        self._closed.set()
         try:
             self.connection.shutdown(socket.SHUT_RDWR)
         except OSError:

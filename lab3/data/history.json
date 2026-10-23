@@ -1,1 +1,74 @@
-[]
+[
+  {
+    "id": 1,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "asd",
+    "timestamp": "2026-10-23T09:32:07+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 2,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "asd",
+    "timestamp": "2026-10-23T09:32:08+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 3,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "asdas",
+    "timestamp": "2026-10-23T09:32:08+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 4,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "da",
+    "timestamp": "2026-10-23T09:32:08+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 5,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "d",
+    "timestamp": "2026-10-23T09:32:08+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 6,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "das",
+    "timestamp": "2026-10-23T09:32:09+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 7,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "dasda",
+    "timestamp": "2026-10-23T09:32:09+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 8,
+    "room": "General",
+    "sender": "MacBook-Pro-Iulian",
+    "text": "dasdad",
+    "timestamp": "2026-10-23T09:32:10+00:00",
+    "reply": null,
+    "file": null
+  }
+]

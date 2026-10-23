@@ -4,11 +4,12 @@ import socket
 import base64
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
 from protocol import receive_packet, send_packet
-from server import ChatServer
+from server import ChatServer, ClientSession
 
 
 class ProtocolTests(unittest.TestCase):
@@ -19,6 +20,36 @@ class ProtocolTests(unittest.TestCase):
         send_packet(first, {"type": "text", "text": "Привет! Salut, țară!"})
         self.assertEqual(receive_packet(second), {
             "type": "text", "text": "Привет! Salut, țară!"})
+
+
+class SessionTests(unittest.TestCase):
+    def test_slow_connection_does_not_block_dispatch(self):
+        started, release, returned = threading.Event(), threading.Event(), threading.Event()
+
+        class SlowSocket:
+            def sendall(self, data):
+                started.set()
+                release.wait(2)
+
+            def shutdown(self, how):
+                release.set()
+
+            def close(self):
+                release.set()
+
+        session = ClientSession(SlowSocket())
+        def dispatch():
+            session.send({"type": "message", "text": "Проверка"})
+            returned.set()
+        worker = threading.Thread(target=dispatch)
+        try:
+            worker.start()
+            self.assertTrue(started.wait(1))
+            self.assertTrue(returned.wait(0.2), "Медленный клиент блокирует рассылку")
+        finally:
+            release.set()
+            session.close()
+            worker.join(timeout=2)
 
 
 class NetworkTests(unittest.TestCase):
