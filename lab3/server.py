@@ -36,25 +36,30 @@ class ClientSession:
         self._closed = threading.Event()
         threading.Thread(target=self._send_loop, daemon=True).start()
 
-    def send(self, packet):
+    def send(self, packet, wait=False):
         if self._closed.is_set():
             raise ConnectionError("Клиент отключён.")
         try:
-            self._outgoing.put_nowait(packet)
+            done = threading.Event()
+            self._outgoing.put_nowait((packet, done))
         except queue.Full:
             self.close()
             raise ConnectionError("Клиент не успевает получать сообщения.") from None
+        if wait:
+            done.wait(2)  # Даём отправить ошибку входа перед закрытием соединения.
 
     def _send_loop(self):
         while not self._closed.is_set():
             try:
-                packet = self._outgoing.get(timeout=0.3)
+                packet, done = self._outgoing.get(timeout=0.3)
             except queue.Empty:
                 continue
             try:
                 send_packet(self.connection, packet)
             except (OSError, ValueError):
                 self.close()
+            finally:
+                done.set()
 
     def close(self):
         self._closed.set()
@@ -168,7 +173,7 @@ class ChatServer:
         except ValueError as error:
             LOGGER.warning("Подключение отклонено: %s", error)
             try:
-                session.send({"type": "error", "message": str(error)})
+                session.send({"type": "error", "message": str(error)}, wait=True)
             except OSError:
                 pass
         except Exception:

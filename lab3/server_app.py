@@ -8,6 +8,7 @@ from tkinter import messagebox, scrolledtext, ttk
 
 from server import ChatServer
 from protocol import DEFAULT_PORT
+from theme import FONT, apply_theme
 
 
 class WindowLogHandler(logging.Handler):
@@ -25,9 +26,10 @@ class WindowLogHandler(logging.Handler):
 class ServerApp(tk.Tk):
     def __init__(self, host="0.0.0.0", port=DEFAULT_PORT, data_dir=None):
         super().__init__()
+        apply_theme(self)
         self.title("Панель сервера — Rețeaua locală")
-        self.geometry("850x540")
-        self.minsize(650, 400)
+        self.geometry("900x650")
+        self.minsize(760, 520)
         self.server = None
         self.data_dir = data_dir
         self.events = queue.Queue()
@@ -36,27 +38,36 @@ class ServerApp(tk.Tk):
         self.status = tk.StringVar(value="Сервер остановлен.")
         self.people = tk.StringVar(value="Участники: —")
         self.columnconfigure(0, weight=1)
-        self.rowconfigure(3, weight=1)
-        controls = ttk.Frame(self, padding=12)
-        controls.grid(row=0, column=0, sticky="ew")
-        ttk.Label(controls, text="Адрес:").pack(side="left")
-        self.host_entry = ttk.Entry(controls, textvariable=self.host, width=16)
-        self.host_entry.pack(side="left", padx=6)
-        ttk.Label(controls, text="Порт:").pack(side="left")
-        self.port_entry = ttk.Entry(controls, textvariable=self.port, width=7)
-        self.port_entry.pack(side="left", padx=6)
-        self.start_button = ttk.Button(controls, text="Запустить", command=self.start_server)
-        self.start_button.pack(side="left", padx=6)
+        self.rowconfigure(4, weight=1)
+        header = ttk.Frame(self, padding=(22, 20, 22, 14))
+        header.grid(row=0, column=0, sticky="ew")
+        ttk.Label(header, text="Панель сервера", style="Title.TLabel").pack(side="left")
+        self.badge = ttk.Label(header, text="Остановлен", style="Offline.TLabel")
+        self.badge.pack(side="right")
+        controls = ttk.Frame(self, style="Card.TFrame", padding=16)
+        controls.grid(row=1, column=0, sticky="ew", padx=20)
+        ttk.Label(controls, text="Адрес сервера", style="CardMuted.TLabel").grid(row=0, column=0, sticky="w")
+        self.host_entry = ttk.Entry(controls, textvariable=self.host, width=20)
+        self.host_entry.grid(row=1, column=0, padx=(0, 14), pady=(6, 0))
+        ttk.Label(controls, text="Порт", style="CardMuted.TLabel").grid(row=0, column=1, sticky="w")
+        self.port_entry = ttk.Entry(controls, textvariable=self.port, width=8)
+        self.port_entry.grid(row=1, column=1, padx=(0, 18), pady=(6, 0))
+        self.start_button = ttk.Button(controls, text="Запустить сервер", style="Accent.TButton", command=self.start_server)
+        self.start_button.grid(row=1, column=2, padx=(0, 8), pady=(6, 0))
         self.stop_button = ttk.Button(controls, text="Остановить", command=self.stop_server, state="disabled")
-        self.stop_button.pack(side="left")
-        ttk.Label(self, textvariable=self.status, wraplength=800).grid(
-            row=1, column=0, sticky="w", padx=12, pady=(0, 6))
-        ttk.Label(self, textvariable=self.people, wraplength=800).grid(
-            row=2, column=0, sticky="w", padx=12, pady=(0, 6))
-        self.logs = scrolledtext.ScrolledText(self, font=("Menlo", 11), wrap="word", state="disabled")
-        self.logs.grid(row=3, column=0, sticky="nsew", padx=12, pady=(0, 8))
-        ttk.Label(self, text="Логи также выводятся в терминал. Файл логов не создаётся.").grid(
-            row=4, column=0, sticky="w", padx=12, pady=(0, 10))
+        self.stop_button.grid(row=1, column=3, pady=(6, 0))
+        info = ttk.Frame(self, padding=(22, 12))
+        info.grid(row=2, column=0, sticky="ew")
+        ttk.Label(info, textvariable=self.status, style="Muted.TLabel", wraplength=840).pack(anchor="w")
+        ttk.Label(info, textvariable=self.people, style="Muted.TLabel", wraplength=840).pack(anchor="w", pady=(6, 0))
+        ttk.Label(self, text="События сервера", font=(FONT, 12, "bold")).grid(
+            row=3, column=0, sticky="w", padx=22, pady=(0, 10))
+        self.logs = scrolledtext.ScrolledText(
+            self, font=("Menlo", 11), wrap="word", state="disabled", padx=14, pady=14,
+            background="#152033", foreground="#dbe7f5", borderwidth=0, highlightthickness=0)
+        self.logs.grid(row=4, column=0, sticky="nsew", padx=20)
+        ttk.Label(self, text="Логи видны здесь и в терминале · Файл логов не создаётся",
+                  style="Muted.TLabel").grid(row=5, column=0, sticky="w", padx=22, pady=14)
         self.log_handler = WindowLogHandler(self.events)
         logging.getLogger("server").addHandler(self.log_handler)
         self.protocol("WM_DELETE_WINDOW", self.close)
@@ -84,6 +95,7 @@ class ServerApp(tk.Tk):
         for widget in (self.host_entry, self.port_entry, self.start_button):
             widget.configure(state="disabled")
         self.stop_button.configure(state="normal")
+        self.badge.configure(text="Работает", style="Online.TLabel")
 
     def stop_server(self):
         if self.server:
@@ -94,6 +106,7 @@ class ServerApp(tk.Tk):
         for widget in (self.host_entry, self.port_entry, self.start_button):
             widget.configure(state="normal")
         self.stop_button.configure(state="disabled")
+        self.badge.configure(text="Остановлен", style="Offline.TLabel")
 
     def refresh(self):
         for _ in range(100):
@@ -113,3 +126,9 @@ class ServerApp(tk.Tk):
         self.stop_server()
         logging.getLogger("server").removeHandler(self.log_handler)
         self.destroy()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(message)s", datefmt="%H:%M:%S")
+    logging.info("Открыта панель сервера. Нажмите «Запустить сервер».")
+    ServerApp().mainloop()
