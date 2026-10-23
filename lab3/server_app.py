@@ -8,7 +8,8 @@ from tkinter import messagebox, scrolledtext, ttk
 
 from server import ChatServer
 from protocol import DEFAULT_PORT
-from theme import FONT, MUTED, SURFACE, TEXT, apply_theme
+from theme import (CHAT_MUTED as MUTED, CHAT_PANEL as SURFACE,
+                   CHAT_TEXT as TEXT, FONT, apply_chat_theme)
 
 
 class WindowLogHandler(logging.Handler):
@@ -26,7 +27,7 @@ class WindowLogHandler(logging.Handler):
 class ServerApp(tk.Tk):
     def __init__(self, host="0.0.0.0", port=DEFAULT_PORT, data_dir=None):
         super().__init__()
-        apply_theme(self)
+        apply_chat_theme(self)
         self.title("Панель сервера — Rețeaua locală")
         self.geometry("1160x740")
         self.minsize(980, 620)
@@ -83,7 +84,7 @@ class ServerApp(tk.Tk):
         self.logs = scrolledtext.ScrolledText(
             events, font=("Menlo", 10), wrap="word", state="disabled", padx=10, pady=10,
             background=SURFACE, foreground=TEXT, borderwidth=0,
-            highlightthickness=1, highlightbackground="#e2e8f0")
+            highlightthickness=1, highlightbackground="#2b3d50")
         self.logs.grid(row=2, column=0, sticky="nsew")
         ttk.Label(self, text="Логи видны здесь и в терминале · Файл логов не создаётся",
                   style="Muted.TLabel").grid(row=4, column=0, sticky="w", padx=22, pady=14)
@@ -117,6 +118,9 @@ class ServerApp(tk.Tk):
         style.configure("Rooms.Treeview", background=SURFACE, fieldbackground=SURFACE,
                         foreground=TEXT, rowheight=35, borderwidth=0)
         style.configure("Rooms.Treeview.Heading", font=(FONT, 10, "bold"), padding=(6, 9))
+        style.configure("Rooms.Treeview.Heading", background="#223448", foreground=TEXT)
+        style.map("Rooms.Treeview", background=[("selected", "#29465f")],
+                  foreground=[("selected", "white")])
         self.room_list = ttk.Treeview(
             table, columns=("name", "status", "messages", "members"),
             show="headings", selectmode="browse", style="Rooms.Treeview", height=7)

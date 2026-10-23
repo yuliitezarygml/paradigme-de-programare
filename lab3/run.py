@@ -6,7 +6,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import ttk
 
-from theme import apply_theme
+from theme import apply_chat_theme
 
 
 def open_program(filename):
@@ -17,7 +17,7 @@ def open_program(filename):
 
 if __name__ == "__main__":
     window = tk.Tk()
-    apply_theme(window)
+    apply_chat_theme(window)
     window.title("Локальный чат — запуск")
     window.geometry("440x280")
     window.resizable(False, False)
