@@ -8,9 +8,6 @@
 Процедурный подход: цикл for и пошаговое заполнение списка result.
 Оба решения поддерживают списки и кортежи и не изменяют входные данные.
 
-Python 3.10+, без дополнительных библиотек. Команды из корня проекта:
-    Запуск:   python3 individul/main.py
-    Проверка: python3 -m unittest discover -s individul -p main.py -v
 """
 
 from copy import deepcopy

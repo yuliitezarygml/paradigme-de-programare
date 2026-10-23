@@ -30,7 +30,7 @@ class ClientSession:
     def __init__(self, connection):
         self.connection = connection
         self.name = ""
-        self.room = ""
+        self.room = None
         # Отдельная очередь: медленный клиент не задерживает остальных.
         self._outgoing = queue.Queue(maxsize=100)
         self._closed = threading.Event()
@@ -121,7 +121,88 @@ class ChatServer:
 
     def members(self):
         with self._lock:
-            return sorted(f"{client.name} ({client.room})" for client in self._clients)
+            return sorted(f"{client.name} ({client.room or 'лобби'})" for client in self._clients)
+
+    def rooms(self):
+        with self._lock:
+            rooms = self.history.rooms()
+            for room in rooms:
+                room["members"] = sum(client.room == room["name"] for client in self._clients)
+            return rooms
+
+    def create_room(self, name):
+        name = self._room_name(name)
+        with self._lock:
+            self.history.create_room(name)
+            self._broadcast_rooms()
+        LOGGER.info("Создана комната: %s", name)
+
+    def set_room_closed(self, name, closed):
+        if type(closed) is not bool:
+            raise ValueError("Состояние комнаты должно быть True или False.")
+        with self._lock:
+            self.history.set_room_closed(name, closed)
+            self._broadcast(name, {"type": "room_status", "room": name, "closed": closed})
+            self._broadcast_rooms()
+        LOGGER.info("Комната %s: %s", name, "закрыта" if closed else "открыта")
+
+    def clear_room_history(self, name):
+        with self._lock:
+            self.history.clear_room_history(name)
+            self._broadcast(name, {"type": "history_cleared", "room": name})
+            self._broadcast_rooms()
+        LOGGER.info("Очищена история комнаты: %s", name)
+
+    def delete_room(self, name):
+        with self._lock:
+            self.history.delete_room(name)
+            for client in list(self._clients):
+                if client.room == name:
+                    client.room = None
+                    try:
+                        client.send({"type": "room_deleted", "room": name})
+                        client.send(self._room_packet(None))
+                    except OSError:
+                        client.close()
+            self._broadcast_members(None)
+            self._broadcast_rooms()
+        LOGGER.info("Удалена комната: %s", name)
+
+    def _room_name(self, name):
+        name = checked_text(name, "Комната", 48)
+        if "\n" in name or "\t" in name:
+            raise ValueError("Название комнаты должно быть в одну строку.")
+        return name
+
+    def _room_packet(self, room, kind="room"):
+        messages, more = self.history.page(room) if room is not None else ([], False)
+        return {"type": kind, "room": room, "messages": messages, "has_more": more,
+                "closed": self.history.is_closed(room) if room is not None else False}
+
+    def _check_name_available(self, session, room):
+        if any(client is not session and client.name.casefold() == session.name.casefold()
+               and client.room == room for client in self._clients):
+            raise ValueError("Это имя уже занято в комнате. Выберите другое.")
+
+    def _require_room(self, session, writable=False):
+        if session.room is None:
+            raise ValueError("Сначала выберите комнату.")
+        if self.history.is_closed(session.room) and writable:
+            raise ValueError("Комната закрыта. Доступно только чтение истории.")
+
+    def _switch_room(self, session, name):
+        name = self._room_name(name)
+        with self._lock:
+            self.history.is_closed(name)  # Проверяет, что комната существует.
+            self._check_name_available(session, name)
+            previous = session.room
+            session.room = name
+            session.send(self._room_packet(name))
+            self._broadcast_members(previous)
+            if previous != name:
+                self._broadcast_members(name)
+            self._broadcast_rooms()
+        LOGGER.info("%s перешёл в комнату %s", session.name, name)
 
     def _accept(self):
         while not self._stopping.is_set():
@@ -145,22 +226,23 @@ class ChatServer:
             if packet.get("type") != "join":
                 raise ValueError("Сначала подключитесь к комнате.")
             session.name = checked_text(packet.get("name"), "Имя", 32)
-            session.room = checked_text(packet.get("room"), "Комната", 48)
-            if "\n" in session.name + session.room or "\t" in session.name + session.room:
-                raise ValueError("Имя и комната должны быть в одну строку.")
+            if "\n" in session.name or "\t" in session.name:
+                raise ValueError("Имя должно быть в одну строку.")
             # Вход, история и рассылка сериализуются: сообщения не теряются
             # между чтением истории и подключением нового участника.
             with self._lock:
-                if any(client.name.casefold() == session.name.casefold()
-                       and client.room == session.room for client in self._clients):
-                    raise ValueError("Это имя уже занято в комнате. Выберите другое.")
-                messages, more = self.history.page(session.room)
-                session.send({"type": "welcome", "name": session.name, "room": session.room,
-                              "messages": messages, "has_more": more})
+                requested = packet.get("room")
+                session.room = (self.history.default_room() if requested is None or requested == ""
+                                else self._room_name(requested))
+                welcome = self._room_packet(session.room, "welcome")
+                self._check_name_available(session, session.room)
                 self._clients.add(session)
+                welcome.update(name=session.name, rooms=self.rooms())
+                session.send(welcome)
                 LOGGER.info("Вход: %s → комната %s; история: %s сообщений",
-                            session.name, session.room, len(messages))
+                            session.name, session.room, len(welcome["messages"]))
                 self._broadcast_members(session.room)
+                self._broadcast_rooms()
             while not self._stopping.is_set():
                 packet = receive_packet(session.connection)
                 try:
@@ -188,25 +270,33 @@ class ChatServer:
                     LOGGER.info("Выход: %s из комнаты %s", session.name, session.room)
                 if not self._stopping.is_set():
                     self._broadcast_members(session.room)
+                    self._broadcast_rooms()
 
     def _dispatch(self, session, packet):
         kind = packet.get("type")
         if kind == "ping":
             session.send({"type": "pong"})
+        elif kind == "switch_room":
+            self._switch_room(session, packet.get("room"))
         elif kind == "text":
             text = checked_text(packet.get("text"), "Сообщение", 4000)
             with self._lock:
+                self._require_room(session, writable=True)
                 reply_to = self._reply_id(session, packet)
                 message = self.history.add(session.room, session.name, text, reply_to)
                 self._broadcast(session.room, {"type": "message", "message": message})
+                self._broadcast_rooms()
                 LOGGER.info("[%s] %s: %r%s", session.room, session.name, text,
                             f" (ответ на #{reply_to})" if reply_to else "")
         elif kind == "history":
             before = packet.get("before")
             if type(before) is not int or before < 1:
                 raise ValueError("Некорректный номер сообщения.")
-            messages, more = self.history.page(session.room, before)
-            session.send({"type": "history", "messages": messages, "has_more": more})
+            with self._lock:
+                self._require_room(session)
+                messages, more = self.history.page(session.room, before)
+                session.send({"type": "history", "room": session.room,
+                              "messages": messages, "has_more": more})
             LOGGER.info("История → %s: %s сообщений", session.name, len(messages))
         elif kind == "upload":
             self._upload(session, packet)
@@ -214,15 +304,18 @@ class ChatServer:
             file_id = packet.get("file_id")
             if not isinstance(file_id, str):
                 raise ValueError("Некорректный идентификатор файла.")
-            info = self.history.file_info(file_id, session.room)
-            if not info:
-                raise ValueError("Файл не найден в этой комнате.")
-            try:
-                data = (self.history.files_dir / file_id).read_bytes()
-            except OSError as error:
-                raise ValueError("Сохранённый файл недоступен на сервере.") from error
-            session.send({"type": "file", "file_id": file_id, "name": info["file_name"],
-                          "data": base64.b64encode(data).decode("ascii")})
+            with self._lock:
+                self._require_room(session)
+                info = self.history.file_info(file_id, session.room)
+                if not info:
+                    raise ValueError("Файл не найден в этой комнате.")
+                try:
+                    data = (self.history.files_dir / file_id).read_bytes()
+                except OSError as error:
+                    raise ValueError("Сохранённый файл недоступен на сервере.") from error
+                session.send({"type": "file", "room": session.room, "file_id": file_id,
+                              "name": info["file_name"],
+                              "data": base64.b64encode(data).decode("ascii")})
             LOGGER.info("Скачивание → %s: %s (%s байт)", session.name, info["file_name"], len(data))
         else:
             raise ValueError("Неизвестная команда.")
@@ -245,6 +338,7 @@ class ChatServer:
         file_id = uuid.uuid4().hex
         destination = self.history.files_dir / file_id
         with self._lock:
+            self._require_room(session, writable=True)
             reply_to = self._reply_id(session, packet)
             try:
                 destination.write_bytes(data)
@@ -254,6 +348,7 @@ class ChatServer:
                 destination.unlink(missing_ok=True)
                 raise
             self._broadcast(session.room, {"type": "message", "message": message})
+            self._broadcast_rooms()
             LOGGER.info("[%s] Файл от %s: %s (%s байт)", session.room, session.name, name, len(data))
 
     def _reply_id(self, session, packet):
@@ -272,5 +367,13 @@ class ChatServer:
                     client.close()
 
     def _broadcast_members(self, room):
-        self._broadcast(room, {"type": "members", "names": sorted(
+        self._broadcast(room, {"type": "members", "room": room, "names": sorted(
             client.name for client in self._clients if client.room == room)})
+
+    def _broadcast_rooms(self):
+        packet = {"type": "rooms", "rooms": self.rooms()}
+        for client in list(self._clients):
+            try:
+                client.send(packet)
+            except OSError:
+                client.close()
