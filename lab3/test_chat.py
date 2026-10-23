@@ -2,6 +2,7 @@
 
 import socket
 import base64
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -79,6 +80,21 @@ class NetworkTests(unittest.TestCase):
         send_packet(bob, {"type": "download", "file_id": message["file"]["id"]})
         download = self.next_packet(bob, "file")
         self.assertEqual(base64.b64decode(download["data"]), contents)
+
+    def test_history_is_json_and_survives_server_restart(self):
+        alice, _ = self.connect_user("Alice")
+        send_packet(alice, {"type": "text", "text": "Сохранить в JSON"})
+        self.next_packet(alice, "message")
+        path = Path(self.directory.name) / "history.json"
+        self.assertTrue(path.exists(), "История должна храниться в history.json")
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8"))[0]["text"],
+                         "Сохранить в JSON")
+        self.server.stop()
+        self.server = ChatServer("127.0.0.1", 0, Path(self.directory.name))
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        _, welcome = self.connect_user("Bob")
+        self.assertEqual(welcome["messages"][0]["text"], "Сохранить в JSON")
 
 
 if __name__ == "__main__":

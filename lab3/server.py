@@ -65,7 +65,6 @@ class ChatServer:
             listener.settimeout(0.3)
         except OSError:
             listener.close()
-            self.history.close()
             raise
         self._listener = listener
         self.port = listener.getsockname()[1]
@@ -87,7 +86,6 @@ class ChatServer:
             session.close()
         for thread in threads:
             thread.join(timeout=2)
-        self.history.close()
 
     def _accept(self):
         while not self._stopping.is_set():
@@ -129,7 +127,7 @@ class ChatServer:
                 packet = receive_packet(session.connection)
                 try:
                     self._dispatch(session, packet)
-                except ValueError as error:
+                except (ValueError, OSError) as error:
                     session.send({"type": "error", "message": str(error)})
         except (OSError, ConnectionError):
             pass
