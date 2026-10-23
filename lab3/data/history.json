@@ -70,5 +70,23 @@
     "timestamp": "2026-10-23T09:32:10+00:00",
     "reply": null,
     "file": null
+  },
+  {
+    "id": 9,
+    "room": "General",
+    "sender": "lab1",
+    "text": "asd",
+    "timestamp": "2026-10-23T09:42:48+00:00",
+    "reply": null,
+    "file": null
+  },
+  {
+    "id": 10,
+    "room": "General",
+    "sender": "lab12",
+    "text": "a",
+    "timestamp": "2026-10-23T09:42:49+00:00",
+    "reply": null,
+    "file": null
   }
 ]
