@@ -96,6 +96,18 @@ class NetworkTests(unittest.TestCase):
         _, welcome = self.connect_user("Bob")
         self.assertEqual(welcome["messages"][0]["text"], "Сохранить в JSON")
 
+    def test_occupied_port_explained_and_server_can_retry(self):
+        other = ChatServer("127.0.0.1", self.server.port, Path(self.directory.name) / "other")
+        with self.assertRaisesRegex(ValueError, "уже занят"):
+            other.start()
+        other.port = 0
+        other.start()
+        self.addCleanup(other.stop)
+        alice, _ = self.connect_user("Alice")
+        send_packet(alice, {"type": "text", "text": "Первый сервер продолжает работать"})
+        self.assertEqual(self.next_packet(alice, "message")["message"]["text"],
+                         "Первый сервер продолжает работать")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

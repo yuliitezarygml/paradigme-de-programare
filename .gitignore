@@ -17,6 +17,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 lab3/server/data/
+lab3/data/
 
 # IDE & Editors
 .idea/

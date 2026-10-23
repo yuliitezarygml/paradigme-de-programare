@@ -3,13 +3,14 @@
 import logging
 import base64
 import binascii
+import errno
 import socket
 import threading
 import uuid
 from pathlib import Path
 
 from history import ChatHistory
-from protocol import MAX_FILE_SIZE, receive_packet, send_packet
+from protocol import DEFAULT_PORT, MAX_FILE_SIZE, receive_packet, send_packet
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class ClientSession:
 
 
 class ChatServer:
-    def __init__(self, host="0.0.0.0", port=5000, data_dir=None):
+    def __init__(self, host="0.0.0.0", port=DEFAULT_PORT, data_dir=None):
         self.host = host
         self.port = port
         self.history = ChatHistory(data_dir or Path(__file__).parent / "data")
@@ -63,13 +64,17 @@ class ChatServer:
             listener.bind((self.host, self.port))
             listener.listen(20)
             listener.settimeout(0.3)
-        except OSError:
+        except OSError as error:
             listener.close()
+            if error.errno == errno.EADDRINUSE:
+                raise ValueError(f"Порт {self.port} уже занят другой программой. "
+                                 "Укажите другой порт и в сервере, и в клиенте.") from None
             raise
         self._listener = listener
         self.port = listener.getsockname()[1]
         self._accept_thread = threading.Thread(target=self._accept, daemon=True)
         self._accept_thread.start()
+        LOGGER.info("Сервер запущен на %s:%s. История: %s", self.host, self.port, self.history.path)
 
     def stop(self):
         if self._stopping.is_set():
@@ -86,6 +91,11 @@ class ChatServer:
             session.close()
         for thread in threads:
             thread.join(timeout=2)
+        LOGGER.info("Сервер остановлен.")
+
+    def members(self):
+        with self._lock:
+            return sorted(f"{client.name} ({client.room})" for client in self._clients)
 
     def _accept(self):
         while not self._stopping.is_set():
@@ -122,16 +132,20 @@ class ChatServer:
                 session.send({"type": "welcome", "name": session.name, "room": session.room,
                               "messages": messages, "has_more": more})
                 self._clients.add(session)
+                LOGGER.info("Вход: %s → комната %s; история: %s сообщений",
+                            session.name, session.room, len(messages))
                 self._broadcast_members(session.room)
             while not self._stopping.is_set():
                 packet = receive_packet(session.connection)
                 try:
                     self._dispatch(session, packet)
                 except (ValueError, OSError) as error:
+                    LOGGER.warning("%s: %s", session.name, error)
                     session.send({"type": "error", "message": str(error)})
         except (OSError, ConnectionError):
             pass
         except ValueError as error:
+            LOGGER.warning("Подключение отклонено: %s", error)
             try:
                 session.send({"type": "error", "message": str(error)})
             except OSError:
@@ -144,6 +158,8 @@ class ChatServer:
                 self._clients.discard(session)
                 self._connections.discard(session)
                 self._threads.discard(threading.current_thread())
+                if session.name:
+                    LOGGER.info("Выход: %s из комнаты %s", session.name, session.room)
                 if not self._stopping.is_set():
                     self._broadcast_members(session.room)
 
@@ -157,12 +173,15 @@ class ChatServer:
                 reply_to = self._reply_id(session, packet)
                 message = self.history.add(session.room, session.name, text, reply_to)
                 self._broadcast(session.room, {"type": "message", "message": message})
+                LOGGER.info("[%s] %s: %r%s", session.room, session.name, text,
+                            f" (ответ на #{reply_to})" if reply_to else "")
         elif kind == "history":
             before = packet.get("before")
             if type(before) is not int or before < 1:
                 raise ValueError("Некорректный номер сообщения.")
             messages, more = self.history.page(session.room, before)
             session.send({"type": "history", "messages": messages, "has_more": more})
+            LOGGER.info("История → %s: %s сообщений", session.name, len(messages))
         elif kind == "upload":
             self._upload(session, packet)
         elif kind == "download":
@@ -178,6 +197,7 @@ class ChatServer:
                 raise ValueError("Сохранённый файл недоступен на сервере.") from error
             session.send({"type": "file", "file_id": file_id, "name": info["file_name"],
                           "data": base64.b64encode(data).decode("ascii")})
+            LOGGER.info("Скачивание → %s: %s (%s байт)", session.name, info["file_name"], len(data))
         else:
             raise ValueError("Неизвестная команда.")
 
@@ -208,6 +228,7 @@ class ChatServer:
                 destination.unlink(missing_ok=True)
                 raise
             self._broadcast(session.room, {"type": "message", "message": message})
+            LOGGER.info("[%s] Файл от %s: %s (%s байт)", session.room, session.name, name, len(data))
 
     def _reply_id(self, session, packet):
         message_id = packet.get("reply_to")

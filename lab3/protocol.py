@@ -3,6 +3,7 @@
 import json
 import struct
 
+DEFAULT_PORT = 5050
 MAX_FILE_SIZE = 10 * 1024 * 1024
 MAX_PACKET_SIZE = 15 * 1024 * 1024
 

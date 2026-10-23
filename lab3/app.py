@@ -10,17 +10,16 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from client import ChatClient
-from server import ChatServer
+from protocol import DEFAULT_PORT
 
 
 class ChatApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Rețeaua locală — Лабораторная 3")
+        self.title("Клиент — Rețeaua locală")
         self.geometry("900x680")
         self.minsize(700, 540)
         self.client = None
-        self.server = None
         self.events = queue.Queue()
         self.messages = {}
         self.selected = None
@@ -31,12 +30,13 @@ class ChatApp(tk.Tk):
         self.has_more = False
         self.name = tk.StringVar(value=socket.gethostname().split(".")[0][:32])
         self.host = tk.StringVar(value="127.0.0.1")
-        self.port = tk.StringVar(value="5000")
+        self.port = tk.StringVar(value=str(DEFAULT_PORT))
         self.room = tk.StringVar(value="General")
-        self.status = tk.StringVar(value="Создайте сервер или подключитесь по IP другого компьютера.")
+        self.status = tk.StringVar(value="Введите IP сервера, имя и комнату, затем подключитесь.")
         self.selection_text = tk.StringVar(value="Нажмите на сообщение, чтобы выбрать его.")
         self.reply_text = tk.StringVar(value="Ответ: не выбран")
-        self.server_text = tk.StringVar(value="Сервер на этом компьютере не запущен.")
+        self.connection_fields = []
+        self.connected_name = ""
         self._build_window()
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(100, self._read_events)
@@ -51,20 +51,19 @@ class ChatApp(tk.Tk):
             ("Порт", self.port, 7), ("Комната", self.room, 16)
         ]):
             ttk.Label(connection, text=label).grid(row=0, column=column, sticky="w")
-            ttk.Entry(connection, textvariable=variable, width=width).grid(
-                row=1, column=column, padx=(0, 12), sticky="ew")
+            entry = ttk.Entry(connection, textvariable=variable, width=width)
+            entry.grid(row=1, column=column, padx=(0, 12), sticky="ew")
+            self.connection_fields.append(entry)
             connection.columnconfigure(column, weight=1)
         controls = ttk.Frame(self, padding=(12, 0))
         controls.grid(row=1, column=0, sticky="ew")
-        self.server_button = ttk.Button(controls, text="Создать сервер", command=self._start_server)
-        self.server_button.pack(side="left")
         self.connect_button = ttk.Button(controls, text="Подключиться", command=self._connect)
         self.connect_button.pack(side="left", padx=8)
         self.disconnect_button = ttk.Button(controls, text="Отключиться", command=self._disconnect)
         self.disconnect_button.pack(side="left")
         self.history_button = ttk.Button(controls, text="Ранняя история", command=self._history)
         self.history_button.pack(side="right")
-        ttk.Label(self, textvariable=self.server_text, wraplength=860).grid(
+        ttk.Label(self, text="Сначала запустите панель сервера. На одном компьютере IP: 127.0.0.1.", wraplength=860).grid(
             row=2, column=0, sticky="w", padx=12, pady=(8, 2))
         self.members = ttk.Label(self, text="Участники: —")
         self.members.grid(row=3, column=0, sticky="w", padx=12, pady=(0, 6))
@@ -101,21 +100,6 @@ class ChatApp(tk.Tk):
             row=7, column=0, sticky="w", padx=12, pady=(0, 10))
         self._update_buttons()
 
-    def _start_server(self):
-        try:
-            port = self._port()
-            server = ChatServer(port=port)
-            server.start()
-            self.server = server
-        except (OSError, ValueError, KeyError, TypeError) as error:
-            messagebox.showerror("Не удалось создать сервер", str(error))
-            return
-        addresses = local_addresses()
-        self.server_text.set(f"Сервер запущен. Для других компьютеров: {addresses}, порт {port}.")
-        self.server_button.configure(state="disabled")
-        self.host.set("127.0.0.1")
-        self._connect()
-
     def _port(self):
         try:
             port = int(self.port.get())
@@ -138,7 +122,7 @@ class ChatApp(tk.Tk):
         client = ChatClient(lambda packet: self.events.put((client, packet)))
         self.client = client
         self.status.set("Подключение к серверу…")
-        self.connect_button.configure(state="disabled")
+        self._update_buttons()
         threading.Thread(target=client.connect, args=(host, port, name, room), daemon=True).start()
 
     def _disconnect(self):
@@ -223,7 +207,8 @@ class ChatApp(tk.Tk):
         self.selection_text.set(f"Выбрано сообщение #{message_id}: {self.messages[message_id]['sender']}")
         self._update_buttons()
 
-    def _render_messages(self, scroll_to_end=True):
+    def _render_messages(self, scroll_to_end=True, history=False):
+        old_position = self.chat.yview()[0]
         self.chat.configure(state="normal")
         self.chat.delete("1.0", "end")
         for message_id, message in sorted(self.messages.items()):
@@ -246,7 +231,7 @@ class ChatApp(tk.Tk):
         if scroll_to_end:
             self.chat.see("end")
         else:
-            self.chat.yview_moveto(0)
+            self.chat.yview_moveto(0 if history else old_position)
         if self.selected in self.messages:
             self._select(self.selected)
 
@@ -260,6 +245,8 @@ class ChatApp(tk.Tk):
         self.history_button.configure(state="normal" if self.connected and self.has_more else "disabled")
         self.connect_button.configure(state="disabled" if self.client else "normal")
         self.disconnect_button.configure(state="normal" if self.client else "disabled")
+        for field in self.connection_fields:
+            field.configure(state="disabled" if self.client else "normal")
 
     def _read_events(self):
         for _ in range(50):
@@ -272,6 +259,7 @@ class ChatApp(tk.Tk):
             kind = packet["type"]
             if kind == "welcome":
                 self.connected = True
+                self.connected_name = packet["name"]
                 self.messages = {m["id"]: m for m in packet["messages"]}
                 self.selected = None
                 self.selection_text.set("Нажмите на сообщение, чтобы выбрать его.")
@@ -282,7 +270,7 @@ class ChatApp(tk.Tk):
                 message = packet["message"]
                 near_bottom = self.chat.yview()[1] >= 0.98
                 self.messages[message["id"]] = message
-                if message["sender"] == self.name.get().strip() and self.busy:
+                if message["sender"] == self.connected_name and self.busy:
                     if message["text"] == self.input.get("1.0", "end-1c").strip():
                         self.input.delete("1.0", "end")
                     self.busy = False
@@ -292,7 +280,7 @@ class ChatApp(tk.Tk):
             elif kind == "history":
                 self.messages.update({m["id"]: m for m in packet["messages"]})
                 self.has_more = packet["has_more"]
-                self._render_messages(False)
+                self._render_messages(False, history=True)
             elif kind == "members":
                 self.members.configure(text="Участники: " + ", ".join(packet["names"]))
             elif kind == "file":
@@ -316,15 +304,4 @@ class ChatApp(tk.Tk):
 
     def _close(self):
         self._disconnect()
-        if self.server:
-            self.server.stop()
         self.destroy()
-
-
-def local_addresses():
-    """Получаем подсказку с LAN-адресами без обращения к внешним сервисам."""
-    try:
-        addresses = socket.gethostbyname_ex(socket.gethostname())[2]
-        return ", ".join(address for address in addresses if not address.startswith("127.")) or socket.gethostname()
-    except OSError:
-        return socket.gethostname()
