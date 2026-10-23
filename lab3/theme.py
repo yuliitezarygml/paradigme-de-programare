@@ -40,3 +40,38 @@ def apply_theme(window):
               foreground=[("disabled", "#8099bc"), ("!disabled", "white")])
     style.configure("Vertical.TScrollbar", background="#cbd5e1", troughcolor=SURFACE,
                     bordercolor=SURFACE, arrowcolor=MUTED, width=10)
+
+# Цвета клиента в стиле тёмного Telegram. Панель сервера остаётся светлой.
+CHAT_BACKGROUND = "#0e1621"
+CHAT_PANEL = "#17212d"
+CHAT_INPUT = "#202f3f"
+CHAT_TEXT = "#e6edf3"
+CHAT_MUTED = "#8da4b5"
+
+
+def apply_chat_theme(window):
+    apply_theme(window)
+    window.configure(background=CHAT_BACKGROUND)
+    style = ttk.Style(window)
+    style.configure(".", background=CHAT_PANEL, foreground=CHAT_TEXT)
+    for name in ("TFrame", "Card.TFrame", "TLabel", "Card.TLabel"):
+        style.configure(name, background=CHAT_PANEL, foreground=CHAT_TEXT)
+    style.configure("Title.TLabel", background=CHAT_PANEL, foreground=CHAT_TEXT, font=(FONT, 21, "bold"))
+    style.configure("Section.TLabel", background=CHAT_PANEL, foreground=CHAT_TEXT, font=(FONT, 16, "bold"))
+    for name in ("Muted.TLabel", "CardMuted.TLabel"):
+        style.configure(name, background=CHAT_PANEL, foreground=CHAT_MUTED)
+    style.configure("Online.TLabel", background="#1c463e", foreground="#6de2b9")
+    style.configure("Offline.TLabel", background="#253648", foreground=CHAT_MUTED)
+    style.configure("TEntry", fieldbackground=CHAT_INPUT, foreground=CHAT_TEXT,
+                    bordercolor="#2b3d50", lightcolor=CHAT_INPUT, darkcolor=CHAT_INPUT)
+    style.map("TEntry", fieldbackground=[("disabled", "#18232f")],
+              foreground=[("disabled", CHAT_MUTED)])
+    style.configure("TButton", background="#233347", foreground=CHAT_TEXT,
+                    bordercolor="#2b3f52", lightcolor="#233347", darkcolor="#233347")
+    style.map("TButton", background=[("disabled", "#1b2938"), ("active", "#304761")],
+              foreground=[("disabled", "#5e758c")])
+    style.configure("Accent.TButton", background="#2b92c7", foreground="white", bordercolor="#2b92c7")
+    style.map("Accent.TButton", background=[("disabled", "#21405a"), ("active", "#3ca4d7")],
+              foreground=[("disabled", "#7592a9"), ("!disabled", "white")])
+    style.configure("Vertical.TScrollbar", background="#2c4055", troughcolor=CHAT_BACKGROUND,
+                    bordercolor=CHAT_BACKGROUND, arrowcolor=CHAT_MUTED)

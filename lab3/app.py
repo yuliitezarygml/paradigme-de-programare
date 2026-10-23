@@ -1,4 +1,4 @@
-"""Простое окно чата. Сетевые потоки передают события в очередь Tkinter."""
+"""Клиент чата: подключение, список комнат и сообщения справа/слева."""
 
 import base64
 import logging
@@ -6,150 +6,148 @@ import queue
 import socket
 import threading
 import tkinter as tk
-from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, scrolledtext, ttk
+from tkinter import filedialog, messagebox, ttk
 
+from chat_view import MessageView
 from client import ChatClient
 from protocol import DEFAULT_PORT
-from theme import BLUE, FONT, MUTED, OWN_MESSAGE, SURFACE, TEXT, apply_theme
+from theme import (CHAT_BACKGROUND, CHAT_INPUT, CHAT_MUTED, CHAT_PANEL,
+                   CHAT_TEXT, FONT, apply_chat_theme)
 
 
 class ChatApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        apply_theme(self)
-        self.title("Клиент — Rețeaua locală")
-        self.geometry("980x800")
-        self.minsize(820, 680)
+        apply_chat_theme(self)
+        self.title("LAN Chat — клиент")
+        self.geometry("1180x800")
+        self.minsize(1020, 680)
         self.client = None
         self.events = queue.Queue()
+        self.connected = False
+        self.connected_name = ""
+        self.current_room = None
+        self.room_closed = False
+        self.switching = False
+        self.busy = False
+        self.rooms = []
         self.messages = {}
+        self.drafts = {}
         self.selected = None
         self.reply_to = None
-        self.downloads = {}
-        self.busy = False
-        self.connected = False
         self.has_more = False
+        self.downloads = {}
+        self.connection_fields = []
         self.name = tk.StringVar(value=socket.gethostname().split(".")[0][:32])
         self.host = tk.StringVar(value="127.0.0.1")
         self.port = tk.StringVar(value=str(DEFAULT_PORT))
-        self.room = tk.StringVar(value="General")
-        self.status = tk.StringVar(value="Введите IP сервера, имя и комнату, затем подключитесь.")
-        self.selection_text = tk.StringVar(value="Нажмите на сообщение, чтобы выбрать его.")
-        self.reply_text = tk.StringVar(value="Ответ: не выбран")
-        self.connection_fields = []
-        self.connected_name = ""
+        self.status = tk.StringVar(value="Запустите сервер и подключитесь по его IP.")
+        self.selection_text = tk.StringVar(value="Выберите сообщение для ответа")
+        self.reply_text = tk.StringVar()
         self._build_window()
         self.protocol("WM_DELETE_WINDOW", self._close)
         self.after(100, self._read_events)
 
     def _build_window(self):
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(2, weight=1)
-        header = ttk.Frame(self, padding=(22, 20, 22, 14))
-        header.grid(row=0, column=0, sticky="ew")
-        ttk.Label(header, text="Локальный чат", style="Title.TLabel").pack(side="left")
-        self.badge = ttk.Label(header, text="Не подключено", style="Offline.TLabel")
-        self.badge.pack(side="right")
-
-        connection = ttk.Frame(self, style="Card.TFrame", padding=16)
-        connection.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 14))
-        for column, (label, variable, width) in enumerate([
-            ("Ваше имя", self.name, 18), ("IP сервера", self.host, 18),
-            ("Порт", self.port, 7), ("Комната", self.room, 16)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        sidebar = ttk.Frame(self, width=255, padding=18)
+        sidebar.grid(row=0, column=0, sticky="nsew")
+        sidebar.grid_propagate(False)
+        sidebar.columnconfigure(0, weight=1)
+        sidebar.rowconfigure(5, weight=1)
+        ttk.Label(sidebar, text="LAN Chat", style="Title.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(sidebar, text="Локальная сеть", style="Muted.TLabel").grid(
+            row=1, column=0, sticky="w", pady=(3, 20))
+        connection = ttk.Frame(sidebar)
+        connection.grid(row=2, column=0, sticky="ew")
+        connection.columnconfigure(0, weight=1)
+        for row, (label, variable) in enumerate([
+            ("Ваше имя", self.name), ("IP сервера", self.host), ("Порт", self.port)
         ]):
-            ttk.Label(connection, text=label, style="CardMuted.TLabel").grid(
-                row=0, column=column, sticky="w", pady=(0, 5))
-            entry = ttk.Entry(connection, textvariable=variable, width=width)
-            entry.grid(row=1, column=column, padx=(0, 10 if column < 3 else 0), sticky="ew")
+            ttk.Label(connection, text=label, style="Muted.TLabel").grid(row=row * 2, column=0, sticky="w")
+            entry = ttk.Entry(connection, textvariable=variable)
+            entry.grid(row=row * 2 + 1, column=0, sticky="ew", pady=(4, 10))
             self.connection_fields.append(entry)
-            connection.columnconfigure(column, weight=1)
-        controls = ttk.Frame(connection, style="Card.TFrame")
-        controls.grid(row=2, column=0, columnspan=4, sticky="ew", pady=(12, 0))
-        self.connect_button = ttk.Button(controls, text="Подключиться", style="Accent.TButton",
-                                         command=self._connect)
-        self.connect_button.pack(side="left")
-        self.disconnect_button = ttk.Button(controls, text="Отключиться", command=self._disconnect)
-        self.disconnect_button.pack(side="left", padx=8)
-        ttk.Label(controls, text="На этом компьютере: 127.0.0.1", style="CardMuted.TLabel").pack(side="right")
+        self.connect_button = ttk.Button(connection, text="Подключиться", style="Accent.TButton", command=self._connect)
+        self.connect_button.grid(row=6, column=0, sticky="ew", pady=(2, 6))
+        self.disconnect_button = ttk.Button(connection, text="Отключиться", command=self._disconnect)
+        self.disconnect_button.grid(row=7, column=0, sticky="ew")
+        self.badge = ttk.Label(sidebar, text="Не подключено", style="Offline.TLabel")
+        self.badge.grid(row=3, column=0, sticky="w", pady=16)
+        ttk.Label(sidebar, text="КОМНАТЫ", style="Muted.TLabel").grid(row=4, column=0, sticky="w", pady=(4, 10))
+        self.room_list = tk.Listbox(
+            sidebar, background=CHAT_PANEL, foreground=CHAT_TEXT, selectbackground="#29465f",
+            selectforeground="white", activestyle="none", borderwidth=0,
+            highlightthickness=0, exportselection=False, font=(FONT, 12))
+        self.room_list.grid(row=5, column=0, sticky="nsew")
+        self.room_list.bind("<<ListboxSelect>>", self._choose_room)
+        ttk.Label(sidebar, text="Комнаты создаёт администратор\nв панели сервера.",
+                  style="Muted.TLabel").grid(row=6, column=0, sticky="w", pady=(14, 0))
 
-        conversation = ttk.Frame(self, style="Card.TFrame", padding=14)
-        conversation.grid(row=2, column=0, sticky="nsew", padx=20)
-        conversation.columnconfigure(0, weight=1)
-        conversation.rowconfigure(1, weight=1)
-        chat_header = ttk.Frame(conversation, style="Card.TFrame")
-        chat_header.grid(row=0, column=0, sticky="ew", pady=(0, 10))
-        self.room_title = ttk.Label(chat_header, text="Переписка", style="Section.TLabel")
-        self.room_title.pack(side="left")
-        self.history_button = ttk.Button(chat_header, text="Ранняя история", command=self._history)
-        self.history_button.pack(side="right")
-        self.members = ttk.Label(chat_header, text="Участники: —", style="CardMuted.TLabel")
-        self.members.pack(side="left", padx=16)
-        self.chat = scrolledtext.ScrolledText(
-            conversation, wrap="word", font=(FONT, 12), padx=12, pady=12,
-            background=SURFACE, foreground=TEXT, selectbackground="#bfdbfe",
-            borderwidth=0, highlightthickness=0, state="disabled")
+        main = ttk.Frame(self)
+        main.grid(row=0, column=1, sticky="nsew", padx=(1, 0))
+        main.columnconfigure(0, weight=1)
+        main.rowconfigure(1, weight=1)
+        header = ttk.Frame(main, padding=(20, 16))
+        header.grid(row=0, column=0, sticky="ew")
+        header.columnconfigure(0, weight=1)
+        self.room_title = ttk.Label(header, text="Выберите комнату", style="Section.TLabel")
+        self.room_title.grid(row=0, column=0, sticky="w")
+        self.room_status = ttk.Label(header, text="", style="Muted.TLabel")
+        self.room_status.grid(row=0, column=1, padx=10)
+        self.history_button = ttk.Button(header, text="Ранняя история", command=self._history)
+        self.history_button.grid(row=0, column=2, rowspan=2)
+        self.members = ttk.Label(header, text="Участники: —", style="Muted.TLabel")
+        self.members.grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        self.chat = MessageView(main, self._select)
         self.chat.grid(row=1, column=0, sticky="nsew")
-        self.chat.tag_configure("author", font=(FONT, 10, "bold"), foreground=MUTED, spacing1=12, spacing3=5)
-        self.chat.tag_configure("quote", foreground=MUTED, font=(FONT, 10), spacing3=5)
-        self.chat.tag_configure("attachment", foreground=BLUE, font=(FONT, 11, "bold"))
-        self.chat.tag_configure("own", background=OWN_MESSAGE, lmargin1=100, lmargin2=100, rmargin=12)
-        self.chat.tag_configure("other", lmargin1=12, lmargin2=12, rmargin=100)
-        self.chat.tag_configure("date", justify="center", foreground=MUTED, font=(FONT, 9), spacing1=8, spacing3=10)
-        self.chat.tag_configure("empty", justify="center", foreground=MUTED, spacing1=35)
-        self.chat.tag_configure("gap", font=(FONT, 5))
-        self.chat.tag_configure("chosen", background="#fff1c2")
-        actions = ttk.Frame(conversation, style="Card.TFrame", padding=(0, 8, 0, 0))
-        actions.grid(row=2, column=0, sticky="ew")
-        ttk.Label(actions, textvariable=self.selection_text, style="CardMuted.TLabel").pack(side="left")
-        self.download_button = ttk.Button(actions, text="Сохранить файл", command=self._download)
-        self.download_button.pack(side="right")
-        self.reply_button = ttk.Button(actions, text="Ответить", command=self._reply)
-        self.reply_button.pack(side="right", padx=8)
 
-        composer = ttk.Frame(self, style="Card.TFrame", padding=14)
-        composer.grid(row=3, column=0, sticky="ew", padx=20, pady=(12, 0))
+        actions = ttk.Frame(main, padding=(16, 8))
+        actions.grid(row=2, column=0, sticky="ew")
+        actions.columnconfigure(0, weight=1)
+        ttk.Label(actions, textvariable=self.selection_text, style="Muted.TLabel").grid(row=0, column=0, sticky="w")
+        self.copy_button = ttk.Button(actions, text="Копировать", command=self._copy)
+        self.copy_button.grid(row=0, column=1, padx=4)
+        self.reply_button = ttk.Button(actions, text="Ответить", command=self._reply)
+        self.reply_button.grid(row=0, column=2, padx=4)
+        self.download_button = ttk.Button(actions, text="Скачать", command=self._download)
+        self.download_button.grid(row=0, column=3, padx=4)
+        composer = ttk.Frame(main, padding=(16, 8, 16, 10))
+        composer.grid(row=3, column=0, sticky="ew")
         composer.columnconfigure(0, weight=1)
-        self.reply_panel = ttk.Frame(composer, style="Card.TFrame")
-        self.reply_panel.grid(row=0, column=0, sticky="ew", pady=(0, 8))
-        ttk.Label(self.reply_panel, textvariable=self.reply_text, style="CardMuted.TLabel").pack(side="left")
-        ttk.Button(self.reply_panel, text="Отменить ответ", command=self._cancel_reply).pack(side="right")
+        self.reply_panel = ttk.Frame(composer)
+        self.reply_panel.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        ttk.Label(self.reply_panel, textvariable=self.reply_text, style="Muted.TLabel").pack(side="left")
+        ttk.Button(self.reply_panel, text="Отменить", command=self._cancel_reply).pack(side="right")
         self.reply_panel.grid_remove()
         self.input = tk.Text(composer, height=2, wrap="word", font=(FONT, 12),
-                             background=SURFACE, foreground=TEXT, insertbackground=TEXT,
-                             borderwidth=0, highlightthickness=0, padx=4, pady=6)
+                             background=CHAT_INPUT, foreground=CHAT_TEXT, insertbackground=CHAT_TEXT,
+                             borderwidth=0, highlightthickness=1, highlightbackground="#2b3d50",
+                             highlightcolor="#409bd0", padx=12, pady=10)
         self.input.grid(row=1, column=0, sticky="ew")
         self.input.bind("<Return>", self._enter)
         self.input.bind("<Shift-Return>", lambda event: None)
-        buttons = ttk.Frame(composer, style="Card.TFrame")
-        buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
-        self.file_button = ttk.Button(buttons, text="Прикрепить файл", command=self._upload)
-        self.file_button.pack(side="left")
-        ttk.Label(buttons, text="Enter — отправить · Shift+Enter — новая строка",
-                  style="CardMuted.TLabel").pack(side="left", padx=14)
-        self.send_button = ttk.Button(buttons, text="Отправить", style="Accent.TButton", command=self._send_text)
-        self.send_button.pack(side="right")
-        ttk.Label(self, textvariable=self.status, style="Muted.TLabel", wraplength=900).grid(
-            row=4, column=0, sticky="w", padx=22, pady=12)
+        self.send_button = ttk.Button(composer, text="Отправить", style="Accent.TButton", command=self._send_text)
+        self.send_button.grid(row=1, column=1, padx=(10, 0), sticky="ns")
+        self.file_button = ttk.Button(composer, text="Прикрепить файл", command=self._upload)
+        self.file_button.grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(composer, text="Enter — отправить · Shift+Enter — новая строка", style="Muted.TLabel").grid(
+            row=2, column=0, columnspan=2, sticky="e", pady=(8, 0))
+        ttk.Label(main, textvariable=self.status, style="Muted.TLabel", wraplength=800).grid(
+            row=4, column=0, sticky="w", padx=18, pady=(0, 12))
         self._render_messages()
         self._update_buttons()
 
-    def _port(self):
-        try:
-            port = int(self.port.get())
-        except ValueError:
-            raise ValueError("Порт должен быть числом от 1 до 65535.") from None
-        if not 1 <= port <= 65535:
-            raise ValueError("Порт должен быть от 1 до 65535.")
-        return port
-
     def _connect(self):
         try:
-            port = self._port()
-            name, host, room = self.name.get().strip(), self.host.get().strip(), self.room.get().strip()
-            if not name or not host or not room:
-                raise ValueError("Заполните имя, IP и комнату.")
+            port = int(self.port.get())
+            if not 1 <= port <= 65535:
+                raise ValueError("Порт должен быть от 1 до 65535.")
+            name, host = self.name.get().strip(), self.host.get().strip()
+            if not name or not host:
+                raise ValueError("Введите имя и IP сервера.")
         except ValueError as error:
             messagebox.showerror("Подключение", str(error))
             return
@@ -158,18 +156,21 @@ class ChatApp(tk.Tk):
         self.client = client
         self.status.set("Подключение к серверу…")
         self._update_buttons()
-        threading.Thread(target=client.connect, args=(host, port, name, room), daemon=True).start()
+        threading.Thread(target=client.connect, args=(host, port, name, ""), daemon=True).start()
 
     def _disconnect(self):
         if self.client:
             self.client.close()
         self.client = None
         self.connected = False
-        self.busy = False
+        self.current_room = None
+        self.busy = self.switching = False
         self.downloads.clear()
+        self.rooms = []
+        self.room_list.delete(0, "end")
         self._cancel_reply()
         self.members.configure(text="Участники: —")
-        self.status.set("Отключено. История остаётся на сервере.")
+        self.status.set("Отключено. Переписка остаётся на сервере.")
         self._update_buttons()
 
     def _work(self, action):
@@ -181,9 +182,50 @@ class ChatApp(tk.Tk):
                 self.events.put((client, {"type": "error", "message": str(error)}))
         threading.Thread(target=run, daemon=True).start()
 
+    def _set_rooms(self, rooms):
+        self.rooms = rooms
+        self.room_list.delete(0, "end")
+        for index, room in enumerate(rooms):
+            suffix = " · закрыта" if room["closed"] else f" · {room.get('members', 0)} чел."
+            self.room_list.insert("end", "# " + room["name"] + suffix)
+            if room["closed"]:
+                self.room_list.itemconfigure(index, foreground=CHAT_MUTED)
+            if room["name"] == self.current_room:
+                self.room_list.selection_set(index)
+
+    def _choose_room(self, event=None):
+        selection = self.room_list.curselection()
+        if not selection or not self.connected or self.busy or self.switching:
+            return
+        room = self.rooms[selection[0]]["name"]
+        if room == self.current_room:
+            return
+        if self.current_room:
+            self.drafts[self.current_room] = self.input.get("1.0", "end-1c")
+        self.switching = True
+        self._update_buttons()
+        client = self.client
+        self._work(lambda: client.send({"type": "switch_room", "room": room}))
+
+    def _enter_room(self, packet):
+        self.current_room = packet["room"]
+        self.room_closed = packet.get("closed", False)
+        self.messages = {message["id"]: message for message in packet["messages"]}
+        self.has_more = packet["has_more"]
+        self.selected = None
+        self.busy = self.switching = False
+        self.selection_text.set("Выберите сообщение для ответа")
+        self._cancel_reply()
+        self.input.delete("1.0", "end")
+        self.input.insert("1.0", self.drafts.get(self.current_room, ""))
+        self.room_title.configure(text="# " + self.current_room if self.current_room else "Выберите комнату слева")
+        self._set_rooms(self.rooms)
+        self._render_messages()
+        self.status.set("Вы в комнате " + self.current_room if self.current_room else "Администратор может создать новую комнату.")
+
     def _send_text(self):
         text = self.input.get("1.0", "end-1c").strip()
-        if not self.connected or self.busy or not text:
+        if not self._can_send() or not text:
             return
         if len(text) > 4000:
             messagebox.showerror("Сообщение", "Не больше 4000 символов.")
@@ -198,6 +240,8 @@ class ChatApp(tk.Tk):
         return "break"
 
     def _upload(self):
+        if not self._can_send():
+            return
         path = filedialog.askopenfilename(title="Выберите файл до 10 МБ")
         if path:
             client, reply_to = self.client, self.reply_to
@@ -208,15 +252,21 @@ class ChatApp(tk.Tk):
 
     def _download(self):
         attachment = self.messages[self.selected]["file"]
-        path = filedialog.asksaveasfilename(title="Сохранить полученный файл",
-                                          initialfile=attachment["name"])
+        path = filedialog.asksaveasfilename(title="Сохранить файл", initialfile=attachment["name"])
         if path:
             self.downloads[attachment["id"]] = Path(path)
             client = self.client
             self._work(lambda: client.send({"type": "download", "file_id": attachment["id"]}))
 
+    def _copy(self):
+        if self.selected in self.messages:
+            message = self.messages[self.selected]
+            self.clipboard_clear()
+            self.clipboard_append(message["text"] or message["file"]["name"])
+            self.status.set("Скопировано.")
+
     def _reply(self):
-        if self.selected is not None:
+        if self.selected in self.messages and self._can_send():
             message = self.messages[self.selected]
             self.reply_to = self.selected
             preview = message["text"] or message["file"]["name"]
@@ -226,7 +276,7 @@ class ChatApp(tk.Tk):
 
     def _cancel_reply(self):
         self.reply_to = None
-        self.reply_text.set("Ответ: не выбран")
+        self.reply_text.set("")
         self.reply_panel.grid_remove()
 
     def _history(self):
@@ -237,62 +287,31 @@ class ChatApp(tk.Tk):
 
     def _select(self, message_id):
         self.selected = message_id
-        self.chat.tag_remove("chosen", "1.0", "end")
-        ranges = self.chat.tag_ranges(f"message_{message_id}")
-        if ranges:
-            self.chat.tag_add("chosen", *ranges)
-        self.selection_text.set(f"Выбрано сообщение #{message_id}: {self.messages[message_id]['sender']}")
+        self.chat.highlight(message_id)
+        self.selection_text.set("Сообщение от " + self.messages[message_id]["sender"])
         self._update_buttons()
 
     def _render_messages(self, scroll_to_end=True, history=False):
-        old_position = self.chat.yview()[0]
-        self.chat.configure(state="normal")
-        self.chat.delete("1.0", "end")
-        if not self.messages:
-            self.chat.insert("end", "Пока здесь тихо.\nНапишите первое сообщение.", ("empty",))
-        previous_day = None
-        for message_id, message in sorted(self.messages.items()):
-            moment = datetime.fromisoformat(message["timestamp"]).astimezone()
-            day = moment.strftime("%d.%m.%Y")
-            if day != previous_day:
-                self.chat.insert("end", day + "\n", ("date",))
-                previous_day = day
-            tag = f"message_{message_id}"
-            own = message["sender"] == self.connected_name
-            appearance = "own" if own else "other"
-            author = "Вы" if own else message["sender"]
-            self.chat.insert("end", f"{author}  ·  {moment:%H:%M}\n", (tag, appearance, "author"))
-            if message["reply"]:
-                reply = message["reply"]
-                preview = (reply["text"] or reply["file_name"] or "Файл").replace("\n", " ")
-                self.chat.insert("end", f"Ответ {reply['sender']}: {preview[:100]}\n", (tag, appearance, "quote"))
-            if message["text"]:
-                self.chat.insert("end", message["text"] + "\n", (tag, appearance))
-            if message["file"]:
-                attachment = message["file"]
-                size = f"{attachment['size'] / 1024:.1f} КБ"
-                self.chat.insert("end", f"Файл: {attachment['name']}  ·  {size}\n", (tag, appearance, "attachment"))
-            self.chat.insert("end", "\n", ("gap",))
-            self.chat.tag_bind(tag, "<Button-1>", lambda event, number=message_id: self._select(number))
-        self.chat.tag_raise("chosen")
-        self.chat.configure(state="disabled")
-        if scroll_to_end:
-            self.chat.see("end")
-        else:
-            self.chat.yview_moveto(0 if history else old_position)
-        if self.selected in self.messages:
-            self._select(self.selected)
+        empty = "Пока здесь тихо. Напишите первое сообщение." if self.current_room else "Выберите комнату слева. Комнаты создаются в панели сервера."
+        self.chat.render(self.messages, self.connected_name, scroll_to_end, history, empty)
+        self.chat.highlight(self.selected)
+
+    def _can_send(self):
+        return self.connected and self.current_room is not None and not self.room_closed and not self.busy and not self.switching
 
     def _update_buttons(self):
-        active = self.connected and not self.busy
+        active = self._can_send()
         self.badge.configure(text="Подключено" if self.connected else "Не подключено",
                              style="Online.TLabel" if self.connected else "Offline.TLabel")
+        self.room_status.configure(text="Только чтение" if self.room_closed and self.current_room else "")
         for button in (self.send_button, self.file_button):
             button.configure(state="normal" if active else "disabled")
-        self.reply_button.configure(state="normal" if active and self.selected in self.messages else "disabled")
+        selected = self.selected in self.messages
+        self.copy_button.configure(state="normal" if selected else "disabled")
+        self.reply_button.configure(state="normal" if active and selected else "disabled")
         attachment = self.messages.get(self.selected, {}).get("file")
-        self.download_button.configure(state="normal" if active and attachment else "disabled")
-        self.history_button.configure(state="normal" if self.connected and self.has_more else "disabled")
+        self.download_button.configure(state="normal" if self.connected and not self.switching and attachment else "disabled")
+        self.history_button.configure(state="normal" if self.connected and self.has_more and not self.switching else "disabled")
         self.connect_button.configure(state="disabled" if self.client else "normal")
         self.disconnect_button.configure(state="normal" if self.client else "disabled")
         for field in self.connection_fields:
@@ -310,30 +329,45 @@ class ChatApp(tk.Tk):
             if kind == "welcome":
                 self.connected = True
                 self.connected_name = packet["name"]
-                self.room_title.configure(text="Комната #" + packet["room"])
-                self.messages = {m["id"]: m for m in packet["messages"]}
+                self.rooms = packet["rooms"]
+                self._enter_room(packet)
+            elif kind == "room":
+                self._enter_room(packet)
+            elif kind == "rooms":
+                self._set_rooms(packet["rooms"])
+            elif kind == "room_status" and packet["room"] == self.current_room:
+                self.room_closed = packet["closed"]
+                if self.room_closed:
+                    self._cancel_reply()
+                self.status.set("Комната закрыта: доступно только чтение." if self.room_closed else "Комната снова открыта.")
+            elif kind == "history_cleared" and packet["room"] == self.current_room:
+                self.messages.clear()
                 self.selected = None
-                self.selection_text.set("Нажмите на сообщение, чтобы выбрать его.")
-                self.has_more = packet["has_more"]
-                self.status.set(f"Вы в комнате {packet['room']} под именем {packet['name']}.")
+                self.has_more = False
+                self._cancel_reply()
                 self._render_messages()
-            elif kind == "message":
+                self.status.set("Администратор очистил историю этой комнаты.")
+            elif kind == "room_deleted":
+                self.drafts.pop(packet["room"], None)
+                self.status.set("Комната удалена администратором: " + packet["room"])
+            elif kind == "message" and packet["message"]["room"] == self.current_room:
                 message = packet["message"]
-                near_bottom = self.chat.yview()[1] >= 0.98
+                near_bottom = self.chat.near_bottom()
                 self.messages[message["id"]] = message
                 if message["sender"] == self.connected_name and self.busy:
                     if message["text"] == self.input.get("1.0", "end-1c").strip():
                         self.input.delete("1.0", "end")
+                        self.drafts.pop(self.current_room, None)
                     self.busy = False
                     self._cancel_reply()
                     self.status.set("Отправлено.")
                 self._render_messages(near_bottom)
-            elif kind == "history":
-                self.messages.update({m["id"]: m for m in packet["messages"]})
+            elif kind == "history" and packet.get("room") == self.current_room:
+                self.messages.update({message["id"]: message for message in packet["messages"]})
                 self.has_more = packet["has_more"]
                 self._render_messages(False, history=True)
-            elif kind == "members":
-                self.members.configure(text="Участники: " + ", ".join(packet["names"]))
+            elif kind == "members" and packet.get("room") == self.current_room:
+                self.members.configure(text="Участники: " + (", ".join(packet["names"]) or "—"))
             elif kind == "file":
                 path = self.downloads.pop(packet["file_id"], None)
                 if path:
@@ -342,9 +376,9 @@ class ChatApp(tk.Tk):
                         self.events.put((owner, {"type": "saved", "path": str(destination)}))
                     self._work(save)
             elif kind == "saved":
-                self.status.set(f"Файл сохранён: {packet['path']}")
+                self.status.set("Файл сохранён: " + packet["path"])
             elif kind == "error":
-                self.busy = False
+                self.busy = self.switching = False
                 self.status.set(packet["message"])
                 messagebox.showerror("Ошибка", packet["message"])
             elif kind == "disconnected":

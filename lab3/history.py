@@ -19,8 +19,9 @@ class ChatHistory:
         self._rooms = {}
         self._paths = {}
         # Наличие папки также запоминает случай, когда администратор удалил все комнаты.
-        first_start = not self.path.exists()
-        self.path.mkdir(exist_ok=True)
+        if not self.path.exists():
+            self._import_legacy()
+            return
         for room_path in self.path.glob("*.json"):
             room = json.loads(room_path.read_text(encoding="utf-8"))
             if not isinstance(room, dict) or not isinstance(room.get("messages"), list):
@@ -28,8 +29,6 @@ class ChatHistory:
             name = room["name"]
             self._rooms[name] = room
             self._paths[name] = room_path
-        if first_start:
-            self._import_legacy()
 
     def _import_legacy(self):
         legacy_path = self.directory / "history.json"
@@ -40,15 +39,23 @@ class ChatHistory:
                 raise ValueError("history.json должен содержать список сообщений.")
         # Файл history.json не перезаписывается и не удаляется при переносе.
         names = {message.get("room") or "General" for message in messages} or {"General"}
-        for name in sorted(names):
-            room_messages = [dict(message, room=name) for message in messages
-                             if (message.get("room") or "General") == name]
-            room = {"name": name, "closed": False,
-                    "next_id": max((m["id"] for m in room_messages), default=0) + 1,
-                    "messages": room_messages}
-            self._paths[name] = self.path / f"{uuid.uuid4().hex}.json"
-            self._save(name, room)
-            self._rooms[name] = room
+        self.path.mkdir()
+        try:
+            for name in sorted(names):
+                room_messages = [dict(message, room=name) for message in messages
+                                 if (message.get("room") or "General") == name]
+                room = {"name": name, "closed": False,
+                        "next_id": max((m["id"] for m in room_messages), default=0) + 1,
+                        "messages": room_messages}
+                self._paths[name] = self.path / f"{uuid.uuid4().hex}.json"
+                self._save(name, room)
+                self._rooms[name] = room
+        except Exception:
+            # Удаляем только созданную нами папку: после исправления импорт повторится.
+            for room_path in self.path.iterdir():
+                room_path.unlink()
+            self.path.rmdir()
+            raise
 
     def _save(self, name, room):
         path = self._paths[name]

@@ -209,6 +209,10 @@ class NetworkTests(unittest.TestCase):
         self.assertFalse(self.next_packet(alice, "room_status")["closed"])
         send_packet(alice, {"type": "text", "text": "Снова открыта"})
         self.assertEqual(self.next_packet(alice, "message")["message"]["text"], "Снова открыта")
+        self.server.set_room_closed("General", True)
+        self.restart_server()
+        _, welcome = self.connect_user("Carol")
+        self.assertTrue(welcome["closed"], "Закрытое состояние должно сохраняться после перезапуска")
 
     def test_clear_history_keeps_ids_and_other_rooms_and_survives_restart(self):
         self.server.create_room("Study")
@@ -245,6 +249,7 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(self.server.rooms(), [])
         bob, welcome = self.connect_user("Bob", "")
         self.assertIsNone(welcome["room"])
+        self.assertEqual(self.next_packet(bob, "rooms")["rooms"], [])
         self.server.create_room("Новая")
         self.assertEqual(self.next_packet(bob, "rooms")["rooms"][0]["name"], "Новая")
         send_packet(bob, {"type": "switch_room", "room": "Новая"})
@@ -265,6 +270,19 @@ class NetworkTests(unittest.TestCase):
 
 
 class MigrationTests(unittest.TestCase):
+    def test_invalid_legacy_json_does_not_mark_import_complete(self):
+        # Проверяем и неверный общий формат, и ошибку уже при создании файлов комнат.
+        for invalid, error in (("{}", ValueError), ('[{"room": "Old"}]', KeyError)):
+            with self.subTest(invalid=invalid), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory)
+                (path / "history.json").write_text(invalid, encoding="utf-8")
+                with self.assertRaises(error):
+                    ChatHistory(path)
+                self.assertFalse((path / "rooms").exists())
+                (path / "history.json").write_text("[]", encoding="utf-8")
+                self.assertEqual(ChatHistory(path).rooms(), [
+                    {"name": "General", "closed": False, "message_count": 0}])
+
     def test_legacy_history_and_attachments_are_preserved_and_imported_once(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
