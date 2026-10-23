@@ -216,6 +216,7 @@ class ChatApp(tk.Tk):
         self.busy = self.switching = False
         self.selection_text.set("Выберите сообщение для ответа")
         self._cancel_reply()
+        self.input.configure(state="normal")
         self.input.delete("1.0", "end")
         self.input.insert("1.0", self.drafts.get(self.current_room, ""))
         self.room_title.configure(text="# " + self.current_room if self.current_room else "Выберите комнату слева")
@@ -301,6 +302,7 @@ class ChatApp(tk.Tk):
 
     def _update_buttons(self):
         active = self._can_send()
+        self.input.configure(state="disabled" if self.switching else "normal")
         self.badge.configure(text="Подключено" if self.connected else "Не подключено",
                              style="Online.TLabel" if self.connected else "Offline.TLabel")
         self.room_status.configure(text="Только чтение" if self.room_closed and self.current_room else "")
@@ -343,6 +345,7 @@ class ChatApp(tk.Tk):
             elif kind == "history_cleared" and packet["room"] == self.current_room:
                 self.messages.clear()
                 self.selected = None
+                self.selection_text.set("Выберите сообщение для ответа")
                 self.has_more = False
                 self._cancel_reply()
                 self._render_messages()
