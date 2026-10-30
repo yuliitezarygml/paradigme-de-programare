@@ -15,7 +15,10 @@ target/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.venv
 .venv/
+venv
+venv/
 lab3/server/data/
 lab3/data/
 
