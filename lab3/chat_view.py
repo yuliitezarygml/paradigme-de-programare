@@ -182,7 +182,7 @@ class MessageView(ttk.Frame):
         body = str(message.get("text") or "")
         reply = message.get("reply")
         attachment = message.get("file")
-        time_text = moment.strftime("%H:%M") if moment else ""
+        time_text = moment.strftime("%H:%M:%SS") if moment else ""
         file_text = ""
         if attachment:
             file_text = f"Файл: {attachment.get('name', 'Файл')} · {self._file_size(attachment.get('size', 0))}"
