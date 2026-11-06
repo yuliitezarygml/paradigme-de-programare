@@ -1,0 +1,79 @@
+{
+  "name": "General",
+  "closed": false,
+  "next_id": 8,
+  "messages": [
+    {
+      "id": 1,
+      "room": "General",
+      "sender": "MacBook-Pro-iulian",
+      "text": "asd",
+      "timestamp": "2026-10-30T09:58:03+00:00",
+      "reply": null,
+      "file": null
+    },
+    {
+      "id": 2,
+      "room": "General",
+      "sender": "123",
+      "text": "фыв",
+      "timestamp": "2026-10-30T10:10:59+00:00",
+      "reply": null,
+      "file": null
+    },
+    {
+      "id": 3,
+      "room": "General",
+      "sender": "123",
+      "text": "ф",
+      "timestamp": "2026-10-30T10:10:59+00:00",
+      "reply": null,
+      "file": null
+    },
+    {
+      "id": 4,
+      "room": "General",
+      "sender": "MacBook-Pro-iulian1234",
+      "text": "фы",
+      "timestamp": "2026-10-30T10:11:00+00:00",
+      "reply": null,
+      "file": null
+    },
+    {
+      "id": 5,
+      "room": "General",
+      "sender": "MacBook-Pro-iulian1234",
+      "text": "в",
+      "timestamp": "2026-10-30T10:11:01+00:00",
+      "reply": null,
+      "file": null
+    },
+    {
+      "id": 6,
+      "room": "General",
+      "sender": "MacBook-Pro-iulian1234",
+      "text": "",
+      "timestamp": "2026-10-30T10:11:06+00:00",
+      "reply": null,
+      "file": {
+        "id": "ef4ab14331d74ad4a8b22989efca4fff",
+        "name": "ChatGPT Image 18 авг. 2026 г., 20_58_54.png",
+        "size": 1581612
+      }
+    },
+    {
+      "id": 7,
+      "room": "General",
+      "sender": "123",
+      "text": "ыв",
+      "timestamp": "2026-10-30T10:11:50+00:00",
+      "reply": {
+        "id": 6,
+        "sender": "MacBook-Pro-iulian1234",
+        "text": "",
+        "file_name": "ChatGPT Image 18 авг. 2026 г., 20_58_54.png"
+      },
+      "file": null
+    }
+  ]
+}
